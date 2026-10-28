@@ -5,6 +5,7 @@ import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js'
 import { FilmPass } from 'three/addons/postprocessing/FilmPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
 // ================= DOM =================
 const $=id=>document.getElementById(id);
@@ -408,6 +409,90 @@ function radiator(x,y,z,ry=0,parent=world){ const g=new THREE.Group(); g.positio
   scene.add(dustPoints);
 })();
 
+
+
+// ================= GLB-АССЕТЫ QUATERNIUS (GitHub, CC0) =================
+// Модели: trebeljahr/quaternius-showcase -> house_interior_pack. Посадка — строго по
+// bounding box: низ модели ставится на заданную поверхность (пол/стол/потолок), центр — в точку.
+const gltfLoader=new GLTFLoader(); const gltfCache={};
+function removeAt(x,y,z){ const v=new THREE.Vector3(x,y,z); for(const ch of [...world.children]) if(ch.position.distanceTo(v)<0.03) world.remove(ch); }
+async function placeModel(file,cfg){
+  try{
+    if(!gltfCache[file]) gltfCache[file]=await gltfLoader.loadAsync('./models/quaternius/'+file);
+    const obj=gltfCache[file].scene.clone(true);
+    obj.traverse(o=>{ if(o.isMesh){ o.castShadow=true; o.receiveShadow=true; if(o.material&&o.material.color){ o.material=o.material.clone(); o.material.color.multiplyScalar(0.85); if('roughness' in o.material)o.material.roughness=0.92; } } });
+    if(cfg.face) cfg.ry=Math.atan2(cfg.face[0]-cfg.x, cfg.face[1]-cfg.z);
+    obj.rotation.y=cfg.ry||0; obj.updateMatrixWorld(true);
+    let bb=new THREE.Box3().setFromObject(obj); const size=new THREE.Vector3(); bb.getSize(size);
+    let sc=1; if(cfg.h) sc=cfg.h/Math.max(0.001,size.y); else if(cfg.len) sc=cfg.len/Math.max(0.001,Math.max(size.x,size.z));
+    obj.scale.setScalar(sc); obj.updateMatrixWorld(true);
+    bb=new THREE.Box3().setFromObject(obj); const center=new THREE.Vector3(); bb.getCenter(center);
+    obj.position.x+=(cfg.x-center.x); obj.position.z+=(cfg.z-center.z);
+    if(cfg.topY!==undefined) obj.position.y+=(cfg.topY-bb.max.y); else obj.position.y+=((cfg.y!==undefined?cfg.y:APT_Y)-bb.min.y);
+    world.add(obj); return obj;
+  }catch(e){ console.warn('model failed',file,e); }
+}
+(function buildAssets(){
+  const Y=APT_Y;
+  // убираем примитивы, которые заменяют настоящие модели
+  removeAt(12.2,Y+0.35,-5.5); removeAt(12.2,Y,-5.5);            // старый диван-коробка и его подушки
+  removeAt(16.5,Y+0.28,4.6); removeAt(17.4,Y+0.62,4.6); removeAt(16.1,Y+0.6,4.6); // кровать, подушка, одеяло
+  removeAt(6.2,Y+0.7,-6.5);                                     // холодильник-коробка
+  removeAt(7.4,Y+0.4,5.6);                                      // ванна-коробка
+  removeAt(8.8,Y,-4.2); removeAt(8.1,Y,-3.5); removeAt(9.5,Y,-4.9); // кухонный стол и стулья-примитивы
+  removeAt(7.2,Y+0.38,-5.2); removeAt(7.2,Y+0.35,-4.88);        // плита-коробка и её дверца
+  for(const [bx,bz] of [[6.9,-5.4],[7.5,-5.4],[6.9,-4.95],[7.5,-4.95]]) removeAt(bx,Y+0.79,bz); // конфорки
+  removeAt(7.45,Y+0.9,-5.25);                                   // чайник на старой плите
+  removeAt(18.3,Y+0.25,3.2); removeAt(18.3,Y+0.55,3.2); removeAt(18.3,Y+0.72,3.2); // тумбочка и лампа-примитивы
+  removeAt(6.2,Y+1.55,6.92);                                    // зеркало-примитив
+  removeAt(-8,Y+0.3,2);                                         // диван в 43-й
+  removeAt(-8,Y+0.25,1.2);                                      // опрокинутый стул-примитив в 43-й
+  const P=(f,c)=>placeModel(f,c);
+  // гостиная 47-й
+  P('Couch_Medium1.glb',{x:12.2,z:-5.5,len:2.3,ry:Math.PI/2});
+  P('Chair_2.glb',{x:15.4,z:-3.3,h:0.95,face:[16.8,-5.8]});
+  P('Bookshelf.glb',{x:18.68,z:-1.5,h:1.92,ry:-Math.PI/2});
+  P('Shelf_Small1.glb',{x:18.9,z:-4.5,h:0.5,y:Y+1.15,ry:-Math.PI/2});
+  P('Light_Floor1.glb',{x:11.15,z:-6.25,h:1.55});
+  P('Houseplant_1.glb',{x:13.15,z:5.55,h:0.8});
+  P('Carpet_1.glb',{x:14.8,z:-3.3,len:3.1,y:Y+0.095});
+  P('Curtains_Double.glb',{x:14.5,z:6.78,len:2.9,topY:Y+2.78});
+  // спальня
+  P('Bed_Single.glb',{x:16.6,z:4.6,len:2.15,ry:Math.PI/2});
+  P('NightStand_1.glb',{x:18.3,z:3.2,h:0.56,ry:-Math.PI/2});
+  P('Light_Desk.glb',{x:18.3,z:3.2,h:0.42,y:Y+0.57,ry:-Math.PI/2});
+  P('Carpet_2.glb',{x:14.7,z:4.3,len:2.3,y:Y+0.095});
+  P('Drawer_2.glb',{x:8.6,z:1.55,h:0.85,ry:Math.PI});
+  // кухня
+  P('Kitchen_Fridge.glb',{x:6.2,z:-6.45,h:1.78});
+  P('Kitchen_Oven.glb',{x:7.2,z:-5.3,h:0.86});
+  P('Kitchen_1Drawers.glb',{x:9.05,z:-6.55,h:0.88});
+  P('Kitchen_CabinetSmall.glb',{x:5.7,z:-4.2,h:0.88,ry:Math.PI/2});
+  P('Table_RoundSmall.glb',{x:8.8,z:-4.2,h:0.75});
+  P('Chair_1.glb',{x:7.95,z:-3.5,h:0.92,face:[8.8,-4.2]});
+  P('Chair_3.glb',{x:9.6,z:-4.9,h:0.92,face:[8.8,-4.2]});
+  P('Plate_1.glb',{x:8.55,z:-4.0,len:0.24,y:Y+0.76});
+  P('Plate_1.glb',{x:9.05,z:-4.4,len:0.24,y:Y+0.76});
+  P('Stool.glb',{x:6.7,z:-3.3,h:0.5});
+  P('Trashcan_Small1.glb',{x:9.65,z:-6.75,h:0.42});
+  P('Light_Chandelier.glb',{x:8.2,z:-4.6,h:0.55,topY:Y+3.0});
+  // ванная
+  P('Bathroom_Bathtub.glb',{x:7.4,z:5.55,len:1.8,ry:Math.PI/2});
+  P('Bathroom_Sink.glb',{x:6.2,z:6.3,h:0.86,ry:Math.PI});
+  P('Bathroom_Mirror1.glb',{x:6.2,z:6.88,h:0.72,y:Y+1.12,ry:Math.PI});
+  P('Bathroom_Toilet.glb',{x:9.3,z:3.2,h:0.78,ry:-Math.PI/2});
+  P('Bathroom_WashingMachine.glb',{x:9.3,z:6.35,h:0.86,ry:-Math.PI/2});
+  // квартира 43 (тётя Люда)
+  P('Couch_Small1.glb',{x:-8,z:2.1,len:1.75,face:[-12,0]});
+  P('Chair_4.glb',{x:-9.6,z:-1.6,h:0.92,face:[-12,0]});
+  P('Houseplant_3.glb',{x:-12.35,z:2.45,h:0.8});
+  // подъезд и подвал
+  P('Trashcan_Small1.glb',{x:4.45,z:2.45,h:0.42,y:0});
+  P('Trashcan_Small1.glb',{x:14.2,z:3.3,h:0.42,y:-3});
+  // коллайдеры под крупные модели
+  addCollider(18.35,19,-2.7,-0.3,Y,Y+1.95); addCollider(8.15,9.45,-4.85,-3.55,Y,Y+0.8);
+  addCollider(5.65,6.75,-7,-5.9,Y,Y+1.8); addCollider(6.6,8.3,4.65,6.45,Y,Y+0.9); addCollider(6.65,7.75,-5.85,-4.75,Y,Y+0.9);
+})();
 
 // сущности
 function makeFigure(dress=false,coatColor=null){

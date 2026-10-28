@@ -1,0 +1,3 @@
+3D-модели мебели: Quaternius — House Interior Pack (CC0 1.0, свободное использование)
+Источник на GitHub: https://github.com/trebeljahr/quaternius-showcase (public/glb/house_interior_pack)
+Оригинальный автор моделей: Quaternius (quaternius.com)
