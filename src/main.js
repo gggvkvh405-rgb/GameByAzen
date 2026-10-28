@@ -25,7 +25,14 @@ function knock(n=3){ if(!AC)return; for(let i=0;i<n;i++){ burst(AC.currentTime+i
 function stepSound(vol=0.25){ if(!AC)return; burst(AC.currentTime,0.09,500,vol); }
 function ring(){ if(!AC)return; for(let i=0;i<2;i++){ const o=AC.createOscillator(),g=AC.createGain(); o.frequency.value=1050; o.type='sine'; g.gain.setValueAtTime(0.06,AC.currentTime+i*0.35); g.gain.exponentialRampToValueAtTime(0.001,AC.currentTime+i*0.35+0.22); o.connect(g).connect(AC.destination); o.start(AC.currentTime+i*0.35); o.stop(AC.currentTime+i*0.35+0.25);} }
 function scareSound(){ if(!AC)return; [110,116,440,466].forEach(fr=>{ const o=AC.createOscillator(),g=AC.createGain(); o.type='sawtooth'; o.frequency.value=fr; g.gain.setValueAtTime(0.14,AC.currentTime); g.gain.exponentialRampToValueAtTime(0.001,AC.currentTime+1.1); o.connect(g).connect(AC.destination); o.start(); o.stop(AC.currentTime+1.15);}); knock(2); }
-function speak(text){ try{ const u=new SpeechSynthesisUtterance(text); u.lang='ru-RU'; u.rate=0.72; u.pitch=0.35; u.volume=0.55; speechSynthesis.cancel(); speechSynthesis.speak(u);}catch(e){} }
+function speak(text){ /* оставлен как запасной вариант, основная озвучка — записанные голоса ниже */ }
+let voiceAudio=null, voiceEnabled=true;
+function playVoice(file,opts={}){ if(!voiceEnabled)return; try{
+  if(voiceAudio){ voiceAudio.pause(); voiceAudio.currentTime=0; }
+  const a=new Audio('./audio/'+file); a.volume=opts.vol??0.9; a.playbackRate=opts.rate??1; voiceAudio=a;
+  if(opts.phone&&AC){ try{ const src=AC.createMediaElementSource(a); const f=AC.createBiquadFilter(); f.type='bandpass'; f.frequency.value=850; f.Q.value=0.6; const g=AC.createGain(); g.gain.value=1.1; src.connect(f); f.connect(g); g.connect(AC.destination); }catch(e){} }
+  a.play().catch(()=>{});
+}catch(e){} }
 let lastSubtitleTimer=null;
 function subtitle(text,ms=4200){ subtitleEl.textContent=text; subtitleEl.classList.remove('hidden'); clearTimeout(lastSubtitleTimer); lastSubtitleTimer=setTimeout(()=>subtitleEl.classList.add('hidden'),ms); }
 function showDialog(title,text,choices){ dialogTitle.textContent=title; dialogText.textContent=text; dialogChoices.innerHTML=''; dialogEl.classList.remove('hidden'); document.exitPointerLock?.();
@@ -541,9 +548,9 @@ const BOOK_TEXT=`ДОМОВАЯ КНИГА (выдержки)
 
 addInteract({pos:[16.8,APT_Y,-5.2],r:2.6,label:()=>'E — телевизор',when:()=>true,fn:()=>{ S.tvOn=!S.tvOn; tvScreen.material=S.tvOn?new THREE.MeshBasicMaterial({color:0x9aa39a}):M.tv; if(tvNoiseGain)tvNoiseGain.gain.value=S.tvOn?0.035:0; if(S.event&&S.event.type==='footsteps'&&S.tvOn)resolveEvent(true); subtitle(S.tvOn?'Телевизор шипит. За его шумом не слышно, как ходят сверху.':'Тишина. В тишине дом слышит тебя лучше.'); }});
 addInteract({pos:[11.2,APT_Y,-6.3],r:2.4,label:()=>'E — телефон',when:()=>inApt(),fn:()=>{
-  if(S.stage==='prologue_phone'){ showDialog('ТЕЛЕФОН — МАМА','— Димочка, ты доехал? Не оставайся там надолго, продай эту квартиру и уезжай. И… слушай. Если ночью будут стучать — сначала посмотри, кто. Только недолго смотри, хорошо?',[{label:'— Хорошо, мам. (положить трубку)',fn:()=>{ setStage('prologue_sleep'); subtitle('День за окном гаснет. Дом скрипит, как скрипел в детстве.'); }}]); return; }
+  if(S.stage==='prologue_phone'){ playVoice('mom_warning.mp3',{phone:true,vol:0.95}); showDialog('ТЕЛЕФОН — МАМА','— Димочка, ты доехал? Не оставайся там надолго, продай эту квартиру и уезжай. И… слушай. Если ночью будут стучать — сначала посмотри, кто. Только недолго смотри, хорошо?',[{label:'— Хорошо, мам. (положить трубку)',fn:()=>{ setStage('prologue_sleep'); subtitle('День за окном гаснет. Дом скрипит, как скрипел в детстве.'); }}]); return; }
   if(S.stage==='n3_phone'||(S.event&&S.event.type==='phone')){ if(S.event&&S.event.type==='phone'){ resolveEvent(false); return; }
-    showDialog('ТЕЛЕФОН — МАМА?','— Дима… я тебе вчера не звонила. Я вообще не могу до тебя дозвониться уже три дня. С этим номером что-то не так.\n\nКто тебе звонит от моего имени?',[{label:'( положить трубку )',fn:()=>{ setStage('n3_kolia'); subtitle('В трубке ещё секунду слышно чужое дыхание. Потом — гудки.'); }}]); return; }
+    playVoice('mom_twist.mp3',{phone:true,vol:0.95}); showDialog('ТЕЛЕФОН — МАМА?','— Дима… я тебе вчера не звонила. Я вообще не могу до тебя дозвониться уже три дня. С этим номером что-то не так.\n\nКто тебе звонит от моего имени?',[{label:'( положить трубку )',fn:()=>{ setStage('n3_kolia'); subtitle('В трубке ещё секунду слышно чужое дыхание. Потом — гудки.'); }}]); return; }
   showDialog('ТЕЛЕФОН','Позвонить маме? Игра сохраняется только так — из квартиры 47.',[{label:'Позвонить маме (сохранить игру)',fn:()=>{ saveSilent(); subtitle('— Я скоро уеду, мам. Правда скоро. [Игра сохранена]'); }},{label:'Положить трубку',secondary:true,fn:()=>{}}]);
 }});
 addInteract({pos:[16.5,APT_Y,4.6],r:2.6,label:()=>'E — кровать',when:()=>true,fn:()=>{
@@ -576,7 +583,7 @@ addInteract({pos:[-5.1,APT_Y,0],r:2.2,label:()=>'E — квартира 43 (тё
 // телевизор 43
 addInteract({pos:[-11.6,APT_Y,0],r:2.4,label:()=>'E — телевизор в 43-й',when:()=>player.pos.x<-5,fn:()=>{
   S.tv43On=!S.tv43On; tv43s.material=S.tv43On?new THREE.MeshBasicMaterial({color:0xa8b3a0}):M.tv;
-  if(S.stage==='n2_tv'&&S.tv43On){ showDialog('ТЕЛЕВИЗОР — ПРОГНОЗ ПОГОДЫ','Ведущая спокойно смотрит в камеру:\n\n«…а завтра в нашем городе ожидается один покойник. В доме на улице Строителей, 13. Хорошего вам вечера».\n\nОна называет завтрашнюю дату. И улыбается — лично тебе.',[{label:'Выключить и уйти',fn:()=>{ setStage('n2_return'); subtitle('За твоей спиной телевизор снова включился. Сам.'); }}]); }
+  if(S.stage==='n2_tv'&&S.tv43On){ playVoice('tv_weather.mp3',{phone:true,vol:0.8,rate:0.98}); showDialog('ТЕЛЕВИЗОР — ПРОГНОЗ ПОГОДЫ','Ведущая спокойно смотрит в камеру:\n\n«…а завтра в нашем городе ожидается один покойник. В доме на улице Строителей, 13. Хорошего вам вечера».\n\nОна называет завтрашнюю дату. И улыбается — лично тебе.',[{label:'Выключить и уйти',fn:()=>{ setStage('n2_return'); subtitle('За твоей спиной телевизор снова включился. Сам.'); }}]); }
   else subtitle('По экрану идёт прогноз погоды. На вчера. На завтра. На день, которого ещё не было.'); }});
 addInteract({pos:[-8,APT_Y,2],r:2,label:()=>'E — лампочка (взять)',when:()=>player.pos.x<-5&&!S.inv.has('bulb'),fn:()=>{ S.inv.add('bulb'); S.battery=Math.min(100,S.battery+60); refreshInv(); subtitle('Ты выкрутил лампочку в 43-й. Теперь там совсем темно. А у тебя — светлее. Так здесь и живут: свет один на всех.'); }});
 // дядя Коля 38
@@ -588,7 +595,7 @@ addInteract({pos:[10,0,1.5],r:2.4,label:()=>'E — осмотреть дядю �
   else subtitle('Он всё ещё сидит. Дом бережёт своих.'); }});
 // подвал: щиток, архив, печь
 addInteract({pos:[6,-3,-3.6],r:2.4,label:()=>'E — электрический щиток',when:()=>player.pos.y<-2,fn:()=>{
-  if(S.stage==='n1_breaker'){ setStage('n1_return'); lampLights.forEach(l=>l.intensity=4); subtitle('Щёлк. Свет вернулся в подъезд. Где-то наверху начали считать двери: «…сорок пятая… сорок шестая…»'); speak('сорок седьмая'); }
+  if(S.stage==='n1_breaker'){ setStage('n1_return'); lampLights.forEach(l=>l.intensity=4); subtitle('Щёлк. Свет вернулся в подъезд. Где-то наверху начали считать двери: «…сорок пятая… сорок шестая…»'); playVoice('counting.mp3',{rate:0.85,vol:0.65}); }
   else subtitle('Счётчик крутится. Быстро. Хотя свет в доме почти нигде не горит. Он считает не киловатты.'); }});
 addInteract({pos:[8,-3,3],r:2.4,label:()=>'E — архив дома',when:()=>player.pos.y<-2,fn:()=>{
   if(S.stage==='n4_archive'){ S.inv.add('matches'); refreshInv(); showDialog('АРХИВ ДОМА','1947 год. Барак. Одна ночь, закрытая печная заслонка, шесть человек — «как будто спали».\n\n1974 год. На этом месте строят пятиэтажку. Комнат в бараке было шесть. Квартир для той семьи — ни одной.\n\nДом всё это время пытается достроить недостающее. Ему нужен шестой этаж. И жильцы для него.\n\nРядом лежат спички.',[{label:'Взять спички и идти наверх',fn:()=>setStage('n4_choice')}]); }
@@ -616,7 +623,7 @@ addInteract({pos:[0,15,-2.6],r:2.4,label:()=>'E — шестая дверь',whe
   if(S.stage==='final_stairs')setStage('final_door');
   if(S.stage==='final_door'){ finalChoice(); return; }
   subtitle('Дверь без номера. За ней тихо. Слишком тихо даже для тишины.'); }});
-function finalChoice(){ const d=S.drawings.size, clean=S.flags.openedWrong===0&&S.flags.peepholeBad===0;
+function finalChoice(){ playVoice('zhilets_offer.mp3',{rate:0.78,vol:0.95}); const d=S.drawings.size, clean=S.flags.openedWrong===0&&S.flags.peepholeBad===0;
   showDialog('ШЕСТАЯ ДВЕРЬ','За дверью стоит Жилец Шестого Этажа. Его лицо меняется: бабушка… тётя Люда… дядя Коля… ты.\n\n— У нас есть для тебя квартира. Наверху. Бесплатно. Навсегда. Все, кого ты любил, уже там. Надо только… согласиться.\n\nИгра не подскажет, какая кнопка правильная. Как и дом.',[
    {label:'Открыть дверь и согласиться',fn:()=>ending('C')},
    {label:'Подписать домовую книгу — занять место бабушки',fn:()=>{ S.flags.signChoice=true; ending('B'); }},
@@ -636,28 +643,30 @@ function spawnDoppel(){ if(doppelDone)return; doppelDone=true; doppel.visible=tr
 function doorChoiceDialog(){ const k=S.doorKnock; if(!k)return;
   const who=k.type==='grandma'?'ГОЛОС ЗА ДВЕРЬЮ':'ТЁТЯ Люда — КВАРТИРА 43';
   showDialog(who,k.text,[{label:'ОТКРЫТЬ ДВЕРЬ',fn:()=>{ door47.setOpen(true); S.flags.openedWrong++; jumpscareAtDoor(); endKnock(); }},
-   {label:'Спросить: «Кто там?»',fn:()=>{ S.flags.asked++; subtitle(k.type==='grandma'?'— Димочка, это я, баба Вера. Я ключи забыла. Открой, внучек.':'— Димочка, это тётя Люда. У меня сахар закончился. И свет вырубили. Я в темноте стою, мне страшно.',6000); speak(k.type==='grandma'?'Димочка, открой. Это я.':'Димочка, открой, а?'); leaveTimer=6; }},
+   {label:'Спросить: «Кто там?»',fn:()=>{ S.flags.asked++; subtitle(k.type==='grandma'?'— Димочка, это я, баба Вера. Я ключи забыла. Открой, внучек.':'— Димочка, это тётя Люда. У меня сахар закончился. И свет вырубили. Я в темноте стою, мне страшно.',6000); playVoice(k.type==='grandma'?'grandma_knock.mp3':'lyuda_sugar.mp3',{rate:k.type==='grandma'?0.92:1,vol:0.95}); leaveTimer=6; }},
    {label:'Молчать и не подходить',secondary:true,fn:()=>{ S.flags.silentOk++; leaveTimer=8; subtitle('Ты не дышишь. За дверью тоже не дышат. Потом — шаги. Медленные. Вниз по лестнице. Она уходит. В этот раз.'); }}]); }
 function endKnock(){ S.doorKnock=null; if(S.stage==='n1_knock')setStage('n1_sleep'); if(S.stage==='n2_knock')setStage('n2_sleep'); }
 function startKnock(type){ S.doorKnock={type,text:type==='grandma'?'Стук. Три раза. Спокойно, по-соседски.\n\nИ голосом умершей бабушки:\n\n«Димочка, открой. Это я».':'Стук. Три раза.\n\n«Димочка, это тётя Люда, у меня сахар закончился, открой, а?»\n\nТётя Люда умерла в 1998 году. Ты был на её похоронах. Тебе было 9, и ты всё помнишь.'};
-  knock(3); speak(type==='grandma'?'Димочка, открой. Это я.':'Димочка, открой, а?'); subtitle(type==='grandma'?'«Димочка, открой. Это я».':'«Димочка, это тётя Люда… открой, а?»',6000);
+  knock(3); playVoice(type==='grandma'?'grandma_knock.mp3':'lyuda_sugar.mp3',{rate:type==='grandma'?0.92:1,vol:0.95}); subtitle(type==='grandma'?'«Димочка, открой. Это я».':'«Димочка, это тётя Люда… открой, а?»',6000);
   hostess.visible=true; hostess.position.set(3.4,APT_Y,0); hostess.lookAt(5,APT_Y,0); }
 // события 5-й ночи
-function startEvent(){ const types=['footsteps','silentKnock','phone','hostessKnock','crying']; const type=types[Math.floor(Math.random()*types.length)]; S.event={type,t:14};
+function startEvent(){ const types=['footsteps','silentKnock','phone','hostessKnock','crying','intercom']; const type=types[Math.floor(Math.random()*types.length)]; S.event={type,t:14};
   if(type==='footsteps'){ S.tvOn=false; tvScreen.material=M.tv; if(tvNoiseGain)tvNoiseGain.gain.value=0; subtitle('Над тобой ходят. Шестого этажа нет. Правило 3: ВКЛЮЧИ ТЕЛЕВИЗОР.',6000); stepSound(0.5); }
   if(type==='silentKnock'){ knock(3); subtitle('Стучат. И молчат. Правило 2: это не к тебе. Не спрашивай. Не открывай. Молчи.',6000); hostess.visible=true; hostess.position.set(3.4,APT_Y,0); }
   if(type==='phone'){ ring(); subtitle('Телефон звонит. Мама сказала: она не может дозвониться уже три дня. Тогда кто это?',6000); }
-  if(type==='hostessKnock'){ knock(3); speak('Димочка, открой'); subtitle('«Димочка, у меня свет вырубили, я замёрзла в подъезде…» Правило 4. НЕ ОТКРЫВАТЬ.',6000); hostess.visible=true; hostess.position.set(3.4,APT_Y,0); }
-  if(type==='crying'){ subtitle('За стеной плачет ребёнок. Включи воду в ванной — не слушай тишину.',6000); } }
+  if(type==='hostessKnock'){ knock(3); playVoice('lyuda_cold.mp3',{vol:0.85}); subtitle('«Димочка, у меня свет вырубили, я замёрзла в подъезде…» Правило 4. НЕ ОТКРЫВАТЬ.',6000); hostess.visible=true; hostess.position.set(3.4,APT_Y,0); }
+  if(type==='crying'){ subtitle('За стеной плачет ребёнок. Включи воду в ванной — не слушай тишину.',6000); }
+  if(type==='intercom'){ ring(); playVoice('choir_intercom.mp3',{vol:0.8,rate:0.95}); subtitle('Домофон. Все двадцать квартир, хором, спокойно и вежливо: «Открой, пожалуйста. Мы все уже собрались». НЕ ОТКРЫВАЙ.',6500); hostess.visible=true; hostess.position.set(3.4,APT_Y,0); } }
 function resolveEvent(ok){ if(!S.event)return; const t=S.event.type; S.event=null; hostess.visible=false;
   if(ok){ setSanity(S.sanity+5); subtitle('…Затихло. Дом отступил. Ненадолго.',3500); if(t==='silentKnock'||t==='hostessKnock')S.flags.silentOk++; }
-  else { setSanity(S.sanity-18); scareSound(); subtitle('Ты ошибся. Дом запомнил твою ошибку. Он вообще всё запоминает.',5000); if(t==='phone')subtitle('В трубке — твой собственный голос: «Не верь себе. Следующий раз я позвоню лучше».',5500); }
+  else { setSanity(S.sanity-18); scareSound(); subtitle('Ты ошибся. Дом запомнил твою ошибку. Он вообще всё запоминает.',5000); if(t==='phone'){ playVoice('self_phone.mp3',{phone:true,rate:0.8,vol:0.9}); } if(t==='phone')subtitle('В трубке — твой собственный голос: «Не верь себе. Следующий раз я позвоню лучше».',5500); }
   if(S.survive)S.survive.next=9; }
 
 // ================= УПРАВЛЕНИЕ =================
 addEventListener('keydown',e=>{ player.keys[e.code]=true;
   if(e.code==='Tab'){ e.preventDefault(); if(S.playing)showNote('ДОМОВАЯ КНИГА И ПРАВИЛА',RULES_TEXT()+'\n\n— — —\n'+BOOK_TEXT); }
   if(e.code==='KeyF'&&S.playing){ S.flashOn=!S.flashOn; }
+  if(e.code==='KeyM'&&S.playing){ voiceEnabled=!voiceEnabled; if(!voiceEnabled&&voiceAudio)voiceAudio.pause(); subtitle(voiceEnabled?'Озвучка включена.':'Озвучка выключена. Дом продолжает говорить. Ты просто его не слышишь.'); }
   if(e.code==='KeyV'&&S.playing&&S.inv.has('camera')){ S.cameraMode=!S.cameraMode; camera.fov=S.cameraMode?52:72; camera.updateProjectionMatrix(); subtitle(S.cameraMode?'REC ● Камера видит лишнее. Смотри, пока не начал кашлять.':'Камера выключена.'); }
   if(e.code==='KeyE'&&S.playing&&currentInteract){ currentInteract.fn(); }
 });
@@ -755,7 +764,7 @@ function animate(){ requestAnimationFrame(animate); const now=performance.now();
       // тапочки ползут
       slipperStep+=dt; if(slipperStep>25){ slipperStep=0; slippers.position.x-=0.35; }
       if(!S.event){ S.survive.next-=dt; if(S.survive.next<=0)startEvent(); }
-      else { S.event.t-=dt; if(S.event.t<=0){ const passive=(S.event.type==='silentKnock'||S.event.type==='hostessKnock'||S.event.type==='phone'); resolveEvent(passive); } }
+      else { S.event.t-=dt; if(S.event.t<=0){ const passive=(S.event.type==='silentKnock'||S.event.type==='hostessKnock'||S.event.type==='phone'||S.event.type==='intercom'); resolveEvent(passive); } }
       objectives(`Продержись до 06:00. Сейчас ${fmtTime()}. ${S.event?'Что-то происходит… помни правила.':'Пока тихо. Слишком тихо.'}`);
       if(S.survive.t<=0){ S.event=null; hostess.visible=false; setStage('final_stairs'); fade(()=>{ subtitle('06:00. Рассвет не наступил. Но над пятым этажом… достроился пролёт. Лестница, которой нет на плане дома.',7000); }); } }
     if(S.stage==='final_stairs'&&player.pos.y>14.4)setStage('final_door');
