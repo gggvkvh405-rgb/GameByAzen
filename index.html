@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>ПЯТЫЙ ЭТАЖ — хоррор</title>
+<link rel="stylesheet" href="/src/style.css"/>
+</head>
+<body>
+<div id="game-wrap">
+  <canvas id="game"></canvas>
+  <div id="vhs"></div><div id="scanlines"></div><div id="vignette"></div><div id="grain"></div>
+  <div id="timestamp">23.05.2000&nbsp; 17:42</div>
+  <div id="hud" class="hidden">
+    <div id="objective"><span class="obj-label">ЗАДАЧА</span><span id="objective-text"></span></div>
+    <div id="interact" class="hidden"></div>
+    <div id="inventory"></div>
+    <div id="status"><span id="clock">17:42</span><span id="sanity-wrap">Рассудок <i id="sanity-bar"><b id="sanity-fill"></b></i></span></div>
+    <div id="listen-hint" class="hidden"></div>
+  </div>
+  <div id="peephole" class="hidden"><div id="peephole-view"><div id="peephole-entity">👁</div><div id="peephole-text"></div></div><div id="peephole-warn">ГЛАЗОК — не дольше 3 секунд…</div></div>
+  <div id="subtitle" class="hidden"></div>
+  <div id="dialog" class="hidden"><div id="dialog-title"></div><div id="dialog-text"></div><div id="dialog-choices"></div></div>
+  <div id="note-modal" class="hidden"><div id="note-paper"><div id="note-title"></div><pre id="note-text"></pre><button id="note-close">Закрыть [Tab / E]</button></div></div>
+  <div id="jumpscare" class="hidden"><div id="jumpscare-face">👁️</div><div id="jumpscare-text">ОН УЖЕ ВНУТРИ</div></div>
+  <div id="fade"></div>
+  <div id="menu">
+    <div class="menu-inner">
+      <div class="menu-date">23.05.2000 — 27.05.2000 · Зареченск, ул. Строителей, 13</div>
+      <h1>ПЯТЫЙ<span>ЭТАЖ</span></h1>
+      <p class="tagline">«В этом доме нет шестого этажа.<br/>Но ночью ты слышишь, как над тобой ходят.»</p>
+      <button id="btn-start">▶ &nbsp;НАЧАТЬ — ПРИЕЗД</button>
+      <button id="btn-continue" class="secondary hidden">Продолжить (сохранение по телефону)</button>
+      <button id="btn-how" class="secondary">Как играть</button>
+      <div id="how" class="hidden">
+        <b>WASD</b> — движение · <b>Мышь</b> — осмотр · <b>E</b> — действие · <b>F</b> — фонарь<br/>
+        <b>Q</b> (у своей двери, изнутри) — глазок · <b>Ctrl</b> (держать) — затаить дыхание и слушать<br/>
+        <b>Shift</b> — бег (шум привлекает Стоящего) · <b>Tab</b> — домовая книга · <b>Esc</b> — пауза<br/><br/>
+        Нет оружия. Не открывай тёте Люде. Не открывай себе. Не смотри в глазок дольше 3 секунд.<br/>
+        Сохранение — только по телефону маме в квартире 47. Рекомендуются наушники. Дом тоже тебя слышит.
+      </div>
+      <div class="menu-gallery"><img src="/screens/stairwell.png" alt="Подъезд"/><img src="/screens/building.png" alt="Пятиэтажка ночью"/><img src="/screens/tv.png" alt="Телевизор"/><img src="/screens/hostess.png" alt="Хозяйка"/></div>
+      <div class="menu-foot">Психологический хоррор · PS1-графика · 5 ночей · 4 концовки · 18+</div>
+    </div>
+  </div>
+  <div id="ending" class="hidden"><div class="ending-inner"><div id="ending-letter"></div><h2 id="ending-title"></h2><div id="ending-text"></div><div id="ending-stats"></div><button id="btn-restart">Играть снова</button></div></div>
+  <div id="pause" class="hidden"><h2>ПАУЗА</h2><p>Дом подождёт. Он умеет ждать.</p><button id="btn-resume">Продолжить</button><button id="btn-quit" class="secondary">В меню</button></div>
+</div>
+<script type="module" src="/src/main.js"></script>
+</body>
+</html>
