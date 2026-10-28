@@ -90,7 +90,7 @@ function buildLanding(fi){
   // северная стена с 4 дверями
   wallSeg(0,-3,10,0.25);
   const nums={ '-1':['Б','Б','Б','Б'],0:[37,38,39,40],1:[41,42,43,44],2:[49,50,51,52],3:[53,54,55,56],4:[45,46,48,'·']}[fi]||[1,2,3,4];
-  for(let i=0;i<4;i++){ const dx=-3.75+i*2.5; const d=box(0.06,2.0,0.9,M.door,dx,y+1.0,-2.85); const lp=labelPlane(String(nums[i]),0.42,0.22,'#e8e2c8','rgba(30,25,18,.9)',52); lp.position.set(dx,y+1.65,-2.80); world.add(lp); }
+  for(let i=0;i<4;i++){ const dx=-3.75+i*2.5; const d=box(0.9,2.0,0.06,M.door,dx,y+1.0,-2.85); const lp=labelPlane(String(nums[i]),0.42,0.22,'#e8e2c8','rgba(30,25,18,.9)',52); lp.position.set(dx,y+1.65,-2.80); world.add(lp); }
   // южная стена: проём лестницы x -2..2
   wallSeg(-3.5,3,3,0.25); wallSeg(3.5,3,3,0.25);
   // западная и восточная стены (проёмы под особые квартиры)
@@ -134,7 +134,7 @@ const sixthGroup=new THREE.Group(); world.add(sixthGroup);
 {
   const y=15; box(10,0.2,6,M.concrete,0,y-0.1,0,sixthGroup); addSurface(-5,5,-3,3,y); box(10,0.2,6,M.concrete,0,y+3.05,0,sixthGroup);
   wallBox(0,y+1.5,-3,10,3,0.25,M.green); wallBox(-5,y+1.5,0,0.25,3,6,M.green); wallBox(5,y+1.5,0,0.25,3,6,M.green); wallBox(-3.5,y+1.5,3,3,3,0.25,M.green); wallBox(3.5,y+1.5,3,3,3,0.25,M.green);
-  const d=box(0.08,2.1,1.1,M.door,0,y+1.05,-2.86,sixthGroup); const lp=labelPlane('?',0.5,0.3,'#ffe9a8','rgba(0,0,0,.85)',60); lp.position.set(0,y+1.75,-2.78); sixthGroup.add(lp); sixthGroup.userData.doorNum=lp;
+  const d=box(1.1,2.1,0.08,M.door,0,y+1.05,-2.86,sixthGroup); const lp=labelPlane('?',0.5,0.3,'#ffe9a8','rgba(0,0,0,.85)',60); lp.position.set(0,y+1.75,-2.78); sixthGroup.add(lp); sixthGroup.userData.doorNum=lp;
   const pl=new THREE.PointLight(0xffdf9e,6,10,1.6); pl.position.set(0,y+2.5,0); sixthGroup.add(pl); sixthGroup.visible=false;
   // детские вещи 1947
   box(0.5,0.4,0.5,M.red,-3.5,y+0.2,1.5,sixthGroup); box(0.35,0.3,0.35,M.dress,3.6,y+0.15,-1,sixthGroup); box(0.7,0.25,0.4,M.door,-2,y+0.12,-1.8,sixthGroup);
@@ -524,5 +524,7 @@ function animate(){ requestAnimationFrame(animate); const now=performance.now();
   }
   renderer.render(scene,camera);
 }
+// отладочный доступ (для автоскриншотов/демо)
+window.__fifth={ S, player, scene, camera, setStage, setDay, activateStanding, startKnock, teleport, standingPos, standing, hostess, doppel, sixthGroup, setSanity, door47, nightStart, subtitle };
 animate();
 addEventListener('resize',()=>{ camera.aspect=innerWidth/innerHeight; camera.updateProjectionMatrix(); });
