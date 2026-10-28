@@ -6,8 +6,43 @@
   "scripts": {
     "dev": "vite --host 0.0.0.0 --port 5173",
     "build": "vite build",
-    "preview": "vite preview --host 0.0.0.0 --port 5173"
+    "preview": "vite preview --host 0.0.0.0 --port 5173",
+    "start:electron": "electron .",
+    "dist:win": "npm run build && electron-builder --win portable --x64"
   },
-  "dependencies": { "three": "^0.160.0" },
-  "devDependencies": { "vite": "^5.4.0" }
+  "dependencies": {
+    "three": "^0.160.0"
+  },
+  "devDependencies": {
+    "electron": "^31.7.7",
+    "electron-builder": "^24.13.3",
+    "vite": "^5.4.0"
+  },
+  "main": "electron/main.cjs",
+  "build": {
+    "appId": "ru.pyatyyetazh.game",
+    "productName": "Пятый Этаж",
+    "artifactName": "PyatyyEtazh.exe",
+    "files": [
+      "dist/**",
+      "electron/**",
+      "package.json"
+    ],
+    "directories": {
+      "output": "release"
+    },
+    "win": {
+      "target": [
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ]
+    },
+    "portable": {
+      "artifactName": "PyatyyEtazh.exe"
+    }
+  }
 }

@@ -1,0 +1,42 @@
+name: Build PyatyyEtazh.exe
+
+on:
+  push:
+    tags: ['v*']
+    branches: ['arena/46df4845-gamebyazen']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      - name: Build web game
+        run: npm run build
+      - name: Build portable EXE
+        run: npx electron-builder --win portable --x64
+      - name: Upload artifact (backup)
+        uses: actions/upload-artifact@v4
+        with:
+          name: PyatyyEtazh-exe
+          path: release/*.exe
+      - name: Publish GitHub Release with EXE
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v1.0.0
+          name: "ПЯТЫЙ ЭТАЖ — игра (Windows .exe)"
+          body: |
+            Скачай **PyatyyEtazh.exe** ниже (Assets) и запусти — установка не нужна (portable).
+            Windows может показать SmartScreen (файл без подписи) — «Подробнее» → «Выполнить в любом случае».
+            F11 — полный экран. Управление: WASD+мышь, E, F, Q, Ctrl, Shift, Tab.
+          files: release/*.exe
+          fail_on_unmatched_files: true

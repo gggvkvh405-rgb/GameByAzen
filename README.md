@@ -5,6 +5,15 @@
 
 > «В этом доме нет шестого этажа. Но ночью ты слышишь, как над тобой ходят.»
 
+## Скачать готовый .exe (Windows)
+
+**[Скачать PyatyyEtazh.exe](https://github.com/gggvkvh405-rgb/GameByAzen/releases/download/v1.0.0/PyatyyEtazh.exe)** (страница релиза: [Releases](https://github.com/gggvkvh405-rgb/GameByAzen/releases/tag/v1.0.0))
+
+Portable: установка не нужна, просто запусти файл. Windows SmartScreen может предупредить,
+что файл без цифровой подписи, — «Подробнее» → «Выполнить в любом случае». F11 — полный экран.
+
+EXE собирается автоматически GitHub Actions (Windows) из этого репозитория: `.github/workflows/build-exe.yml`.
+
 ## Как запустить на компьютере
 
 Нужен только Node.js 18+:
