@@ -1,3 +1,5 @@
 3D-модели мебели: Quaternius — House Interior Pack (CC0 1.0, свободное использование)
 Источник на GitHub: https://github.com/trebeljahr/quaternius-showcase (public/glb/house_interior_pack)
 Оригинальный автор моделей: Quaternius (quaternius.com)
+
+Дополнительно: modular_men (Suit, Casual, Casual2), modular_women (Formal, Casual) — персонажи; street_pack (Streetlight_Single, Trashcan_Green); nature_pack (BirchTree_1/2, BirchTree_Dead_1); house_interior_pack: Bathroom_Towel, Bathroom_ToiletPaper, Shelf_Small2, Plate_2, Light_Ceiling1/2, Light_Floor2, Houseplant_2/5, Drawer_4, Kitchen_Cabinet1, NightStand_2.
