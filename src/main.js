@@ -119,7 +119,7 @@ const renderer=new THREE.WebGLRenderer({canvas,antialias:true,powerPreference:'h
 renderer.setSize(1280,720,false); renderer.setPixelRatio(1);
 renderer.shadowMap.enabled=true; renderer.shadowMap.type=THREE.PCFSoftShadowMap;
 renderer.toneMapping=THREE.ACESFilmicToneMapping; renderer.toneMappingExposure=1.15;
-const hemi=new THREE.HemisphereLight(0xbfc8b0,0x1a1a14,0.25); scene.add(hemi);
+const hemi=new THREE.HemisphereLight(0xbfc8b0,0x4a4638,0.25); scene.add(hemi);
 const composer=new EffectComposer(renderer);
 composer.addPass(new RenderPass(scene,camera));
 const bloom=new UnrealBloomPass(new THREE.Vector2(1280,720),0.32,0.55,0.78); composer.addPass(bloom);
@@ -148,7 +148,7 @@ function addSurface(x1,x2,z1,z2,y){ surfaces.push({x1,x2,z1,z2,y}); }
 function groundYAt(x,z,refY){ let best=null,bd=1e9; for(const s of surfaces){ if(x>=s.x1&&x<=s.x2&&z>=s.z1&&z<=s.z2){ const y=typeof s.y==='function'?s.y(x,z):s.y; const d=Math.abs(y-refY); if(d<bd){bd=d;best=y;} } } return bd<2.1?best:null; }
 function addCollider(x1,x2,z1,z2,y1,y2){ const c={x1,x2,z1,z2,y1,y2,enabled:true}; colliders.push(c); return c; }
 function box(w,h,d,mat,x,y,z,parent=world){ const rad=Math.max(0.001,Math.min(0.03,Math.min(w,h,d)*0.24)); const m=new THREE.Mesh(new RoundedBoxGeometry(w,h,d,7,rad),mat); m.position.set(x,y,z); m.castShadow=true; m.receiveShadow=true; parent.add(m); return m; }
-function wallBox(cx,cy,cz,w,h,d,mat=M.concrete){ const m=box(w,h,d,mat,cx,cy,cz); addCollider(cx-w/2,cx+w/2,cz-d/2,cz+d/2,cy-h/2,cy+h/2); return m; }
+function wallBox(cx,cy,cz,w,h,d,mat=M.concrete){ const m=box(w,h,d,mat,cx,cy,cz); m.userData.wall=true; addCollider(cx-w/2,cx+w/2,cz-d/2,cz+d/2,cy-h/2,cy+h/2); return m; }
 function addInteract(obj){ interactables.push(obj); }
 
 // Дверь с петлёй
@@ -162,7 +162,7 @@ function makeDoor(x,y,z,ry=0){ const g=new THREE.Group(); g.position.set(x,y,z);
 
 // ================= ПОСТРОЙКА ДОМА =================
 const FLOORS=5, FH=3;
-const lampLights=[];
+const lampLights=[]; const aptLights=[];
 function buildLanding(fi){
   const y=fi*FH;
   // пол и потолок
@@ -178,7 +178,7 @@ function buildLanding(fi){
   // южная стена: проём лестницы x -2..2
   wallSeg(-3.5,3,3,0.25); wallSeg(3.5,3,3,0.25);
   // западная и восточная стены (проёмы под особые квартиры)
-  const westGap=(fi===4), eastGap=(fi===4||fi===0||fi===-1);
+  const westGap=(fi===4||fi===0), eastGap=(fi===4||fi===0||fi===-1);
   if(westGap){ wallSeg(-5,-2,0.25,2); wallSeg(-5,2,0.25,2); } else wallSeg(-5,0,0.25,6);
   if(eastGap){ wallSeg(5,-2,0.25,2); wallSeg(5,2,0.25,2); } else wallSeg(5,0,0.25,6);
   // лампа
@@ -340,13 +340,16 @@ function radiator(x,y,z,ry=0,parent=world){ const g=new THREE.Group(); g.positio
   cyl(0.02,0.02,0.5,M.metal,6.55,Y+0.95,-6.5,world,8);
   // ванная: плитка, раковина, зеркало
   box(4.9,1.7,0.04,M.tile,7.5,Y+0.85,6.96); box(0.04,1.7,4.9,M.tile,9.96,Y+0.85,4.5);
+  box(5,0.05,5,M.tile,7.5,Y+0.026,4.5); box(0.04,1.7,4.9,M.tile,5.06,Y+0.85,4.5); box(4.9,1.7,0.04,M.tile,7.5,Y+0.85,2.06);
   cyl(0.09,0.12,0.75,new THREE.MeshStandardMaterial({color:0xd8dcd4,roughness:0.3}),6.2,Y+0.38,6.3,world,12);
   cyl(0.3,0.24,0.14,new THREE.MeshStandardMaterial({color:0xe4e8e0,roughness:0.25}),6.2,Y+0.8,6.3,world,16);
   box(0.5,0.65,0.03,M.metal,6.2,Y+1.55,6.92);
   // прихожая: вешалка с пальто и зеркало
   box(1.3,0.5,0.05,M.door,7.6,Y+1.78,1.96);
   for(let i=0;i<4;i++) sph(0.035,M.metal,7.15+i*0.3,Y+1.62,1.9);
-  const coatMesh=new THREE.Mesh(new THREE.CylinderGeometry(0.13,0.3,0.95,10),M.coat); coatMesh.position.set(7.75,Y+1.05,1.88); coatMesh.castShadow=true; world.add(coatMesh);
+  const coatPts=new THREE.SplineCurve([[0.02,0],[0.3,0.03],[0.27,0.3],[0.2,0.68],[0.24,0.9],[0.05,0.97]].map(p=>new THREE.Vector2(p[0],p[1]))).getPoints(32);
+  const coatMesh=new THREE.Mesh(new THREE.LatheGeometry(coatPts,64),M.coat); coatMesh.position.set(7.75,Y+0.52,1.88); coatMesh.castShadow=true; coatMesh.receiveShadow=true; world.add(coatMesh);
+  const coatSh=sph(0.14,M.coat,7.75,Y+1.47,1.88); coatSh.scale.set(1.25,0.5,0.8);
   box(0.6,0.9,0.03,M.metal,9.85,Y+1.5,-1.2);
   // дисковый телефон: диск и трубка
   cyl(0.13,0.15,0.04,new THREE.MeshStandardMaterial({color:0xd8cfb8,roughness:0.4}),11.2,Y+1.06,-6.4,world,18).rotation.x=0.5;
@@ -421,7 +424,7 @@ async function placeModel(file,cfg){
   try{
     if(!gltfCache[file]) gltfCache[file]=await gltfLoader.loadAsync('./models/quaternius/'+file);
     const obj=gltfCache[file].scene.clone(true);
-    obj.traverse(o=>{ if(o.isMesh){ o.castShadow=true; o.receiveShadow=true; if(o.material&&o.material.color){ o.material=o.material.clone(); o.material.color.multiplyScalar(0.85); if('roughness' in o.material)o.material.roughness=0.92; } } });
+    obj.traverse(o=>{ if(o.isMesh){ o.castShadow=false; o.receiveShadow=true; /* GLB не кастят тени: битый depth-растр части моделей ломает теневую карту фонаря */ if(o.material&&o.material.color){ o.material=o.material.clone(); o.material.color.multiplyScalar(0.85); if('roughness' in o.material)o.material.roughness=0.92; } } });
     if(cfg.face) cfg.ry=Math.atan2(cfg.face[0]-cfg.x, cfg.face[1]-cfg.z);
     obj.rotation.y=cfg.ry||0; obj.updateMatrixWorld(true);
     let bb=new THREE.Box3().setFromObject(obj); const size=new THREE.Vector3(); bb.getSize(size);
@@ -446,6 +449,8 @@ async function placeModel(file,cfg){
   removeAt(7.45,Y+0.9,-5.25);                                   // чайник на старой плите
   removeAt(18.3,Y+0.25,3.2); removeAt(18.3,Y+0.55,3.2); removeAt(18.3,Y+0.72,3.2); // тумбочка и лампа-примитивы
   removeAt(6.2,Y+1.55,6.92);                                    // зеркало-примитив
+  for(const cx of [5.65,6.77,7.89,9.01]){ removeAt(cx,Y+0.43,-6.62); removeAt(cx,Y+0.62,-6.32); } // примитивный ряд кухонных шкафов и ручки (дубли GLB)
+  removeAt(8.6,Y+0.75,-4.05); removeAt(9.0,Y+0.75,-4.35);       // тарелки-торы (дубли GLB-тарелок)
   removeAt(18.75,Y,-1.5);                                       // сервант-примитив (его заменяет Bookshelf)
   removeAt(-8,Y+0.3,2);                                         // диван в 43-й
   removeAt(-8,Y+0.25,1.2);                                      // опрокинутый стул-примитив в 43-й
@@ -468,12 +473,12 @@ async function placeModel(file,cfg){
   P('NightStand_1.glb',{x:18.3,z:3.2,h:0.56,ry:-Math.PI/2});
   P('Light_Desk.glb',{x:18.3,z:3.2,h:0.42,y:Y+0.56,ry:-Math.PI/2});
   P('Carpet_2.glb',{x:14.7,z:4.3,len:2.3,y:Y+0.095});
-  P('Drawer_2.glb',{x:8.6,z:1.55,h:0.85,ry:Math.PI});
+  P('Drawer_2.glb',{x:16.7,z:0.62,h:0.82,ry:Math.PI}); // широкий комод — в спальню (в прихожей перекрывал проход)
   // кухня
-  P('Kitchen_Fridge.glb',{x:6.2,z:-6.45,h:1.78});
-  P('Kitchen_Oven.glb',{x:7.2,z:-5.3,h:0.86});
-  P('Kitchen_1Drawers.glb',{x:9.05,z:-6.55,h:0.88});
-  P('Kitchen_CabinetSmall.glb',{x:5.7,z:-4.2,h:0.88,ry:Math.PI/2});
+  P('Kitchen_Fridge.glb',{x:5.5,z:-6.5,h:1.78});
+  P('Kitchen_Oven.glb',{x:7.3,z:-6.52,h:0.86});
+  P('Kitchen_1Drawers.glb',{x:8.55,z:-6.55,h:0.88});
+  P('Kitchen_CabinetSmall.glb',{x:6.42,z:-6.48,h:0.88,ry:Math.PI/2});
   P('Table_RoundSmall.glb',{x:8.8,z:-4.2,h:0.75});
   P('Chair_1.glb',{x:7.95,z:-3.5,h:0.92,face:[8.8,-4.2]});
   P('Chair_3.glb',{x:9.6,z:-4.9,h:0.92,face:[8.8,-4.2]});
@@ -499,6 +504,46 @@ async function placeModel(file,cfg){
   addCollider(18.35,19,-2.7,-0.3,Y,Y+1.95); addCollider(8.15,9.45,-4.85,-3.55,Y,Y+0.8);
   addCollider(5.65,6.75,-7,-5.9,Y,Y+1.8); addCollider(6.6,8.3,4.65,6.45,Y,Y+0.9); addCollider(6.65,7.75,-5.85,-4.75,Y,Y+0.9);
 })();
+
+// ---------- ИСПРАВЛЕНИЯ: свет в квартирах, зеркало, чайник, выход на улицу ----------
+const entranceDoor=makeDoor(-4.92,0,-0.5,0);
+(function buildFixes(){
+  const Y=APT_Y;
+  // потолочные светильники и свет в квартире 47 (по комнатам), 43, 38 и котельной
+  function aptLight(x,y,z,dist=10){ const pl=new THREE.PointLight(0xffdf9e,5,dist,1.6); pl.position.set(x,y,z); scene.add(pl); aptLights.push(pl); return pl; }
+  function fixture(x,y,z){ cyl(0.15,0.19,0.055,M.lampOn,x,y,z,world,32); }
+  aptLight(14.5,Y+2.5,-3.5,11);                       // гостиная (люстра уже есть)
+  fixture(15.8,Y+2.96,4.2); aptLight(15.8,Y+2.5,4.2); // спальня
+  aptLight(8.2,Y+2.45,-4.6,10);                       // кухня (люстра GLB)
+  fixture(7.5,Y+2.96,4.6); aptLight(7.5,Y+2.5,4.6,8); // ванная
+  fixture(7.2,Y+2.96,0); aptLight(7.2,Y+2.5,0,8);     // прихожая
+  fixture(-9,Y+2.96,0); aptLight(-9,Y+2.5,0,9);       // квартира 43
+  fixture(9,2.96,0); aptLight(9,2.5,0,9);             // квартира 38
+  const bl=new THREE.PointLight(0xffa050,2.5,11,1.6); bl.position.set(10,-0.8,0); scene.add(bl); // котельная
+  // зеркало в ванной: отражающая поверхность поверх тёмной GLB-заготовки
+  box(0.52,0.66,0.02,new THREE.MeshStandardMaterial({color:0x9fb4ac,roughness:0.16,metalness:0.85}),6.2,Y+1.48,6.845);
+  // чайник на новой плите
+  const kettle2=sph(0.13,M.metal,7.55,Y+0.95,-6.55); kettle2.scale.y=0.85;
+  const spout=cyl(0.018,0.032,0.1,M.metal,7.68,Y+1.0,-6.55,world,16); spout.rotation.z=-0.7;
+  // ---------- улица: двор за подъездной дверью ----------
+  box(18,0.2,20,M.concrete,-14.5,-0.1,0); addSurface(-23,-5,-7,7,0);
+  const fenceM=new THREE.MeshStandardMaterial({color:0x3d4a42,roughness:0.8,metalness:0.3});
+  box(0.15,1.6,14,fenceM,-22.9,0.8,0); box(18,1.6,0.15,fenceM,-14.5,0.8,-6.9); box(18,1.6,0.15,fenceM,-14.5,0.8,6.9);
+  addCollider(-23.1,-22.7,-7,7,0,1.7); addCollider(-23,-5,-7.1,-6.75,0,1.7); addCollider(-23,-5,6.75,7.1,0,1.7);
+  box(1.8,0.08,0.45,M.door,-9,0.45,3.4); box(0.08,0.45,0.4,M.metal,-9.7,0.22,3.4); box(0.08,0.45,0.4,M.metal,-8.3,0.22,3.4); // лавочка
+  for(const [tx,tz] of [[-12,-3.8],[-18,2.8],[-16,-4.5]]){ cyl(0.09,0.13,1.6,new THREE.MeshStandardMaterial({color:0x4a3826,roughness:1}),tx,0.8,tz,world,12);
+    const cr=sph(1.15,new THREE.MeshStandardMaterial({color:0x2c4630,roughness:1}),tx,2.3,tz); cr.scale.y=1.15; }
+  cyl(0.05,0.07,3.2,M.metal,-8,1.6,-2.5,world,12); sph(0.09,M.lampOn,-8,3.25,-2.5);
+  const yardLamp=new THREE.PointLight(0xffdf9e,5,13,1.6); yardLamp.position.set(-8,3.15,-2.5); scene.add(yardLamp); lampLights.push(yardLamp);
+  // тени от фонаря отбрасывают только стены: мебель (GLB и примитивы) ломала теневую карту чёрными пятнами
+  world.traverse(o=>{ if(o.isMesh) o.castShadow=!!o.userData.wall; });
+  box(12,10,8,M.concrete,-32,5,4); // дом напротив
+  for(let wi=0;wi<8;wi++){ if(wi%3===2)continue; box(0.06,0.7,0.55,M.lampOn,-25.9,1.8+(wi%4)*1.9,0.5+Math.floor(wi/4)*2.6); }
+})();
+addInteract({pos:[-5,0,0],r:2.3,label:()=>'E — дверь подъезда (улица)',when:()=>player.pos.y<1.5,fn:()=>{
+  entranceDoor.setOpen(!entranceDoor.open); stepSound(0.4);
+  if(entranceDoor.open&&!S.flags.wentOut){ S.flags.wentOut=true; subtitle('Улица. Май 2000 года. Воздух пахнет сиренью и свободой. Можно уехать прямо сейчас… но документы бабушки всё ещё в квартире. Решай сам.',6500); }
+}});
 
 // сущности — высокополигональные модели: сглаженные силуэты (Lathe 192 сегмента),
 // детализированные лица: белок/радужка/зрачок/блик, веки, ресницы, нос, губы, скулы, челюсть
@@ -650,7 +695,7 @@ function setStage(st){ S.stage=st; if(OBJECTIVES[st])objectives(OBJECTIVES[st]);
 function fade(cb){ fadeEl.style.opacity=1; setTimeout(()=>{ cb&&cb(); setTimeout(()=>fadeEl.style.opacity=0,350); },1250); }
 function teleport(x,y,z,yaw){ player.pos.set(x,y,z); if(yaw!==undefined)player.yaw=yaw; player.pitch=0; }
 function nightStart(nextStage,night,msg){ fade(()=>{ S.night=night; gameMinutes=3*60+33; setDay(false); teleport(15.5,APT_Y,3.2,Math.PI); standingActive=false; standing.visible=false; hostess.visible=false; setSanity(Math.min(100,S.sanity+45)); if(!door47.open)door47.setOpen(false); setStage(nextStage); subtitle(msg,6000); }); }
-function setDay(day){ hemi.intensity=day?1.15:0.16; windowGlow.material.color.set(day?0xbfd4e8:0x141c26); lampLights.forEach(l=>l.intensity=day?0:5); if(day)lampLights.forEach(l=>l.intensity=0); timestampEl.style.opacity=day?0.5:0.9; }
+function setDay(day){ hemi.intensity=day?1.15:0.16; windowGlow.material.color.set(day?0xbfd4e8:0x141c26); lampLights.forEach(l=>l.intensity=day?2.2:5); aptLights.forEach(l=>l.intensity=day?5:1.8); timestampEl.style.opacity=day?0.5:0.9; }
 function activateStanding(speedMul=1){ standingActive=true; standing.visible=true; standing.userData.speedMul=speedMul;
   // появляется на пролёте ниже/выше игрока, спиной
   standingPos.set(player.pos.x>5?0:player.pos.x, Math.max(-3,player.pos.y-3), player.pos.z>0?-1:1);
@@ -840,7 +885,7 @@ function animate(){ requestAnimationFrame(animate); const now=performance.now();
     const mv=new THREE.Vector3(); if(!dialogOpen){ if(player.keys['KeyW'])mv.add(fwd); if(player.keys['KeyS'])mv.sub(fwd); if(player.keys['KeyD'])mv.add(right); if(player.keys['KeyA'])mv.sub(right); }
     if(mv.lengthSq()>0){ mv.normalize().multiplyScalar(speed*dt);
       const tryMove=(dx,dz)=>{ const nx=player.pos.x+dx,nz=player.pos.z+dz; let blocked=false;
-        for(const c of colliders){ if(!c.enabled)continue; if(player.pos.y+1.6<c.y1||player.pos.y>c.y2)continue; const ex=0.32; if(nx>c.x1-ex&&nx<c.x2+ex&&nz>c.z1-ex&&nz<c.z2+ex){blocked=true;break;} }
+        for(const c of colliders){ if(!c.enabled)continue; if(player.pos.y+1.6<c.y1||player.pos.y>=c.y2-0.05)continue; const ex=0.32; if(nx>c.x1-ex&&nx<c.x2+ex&&nz>c.z1-ex&&nz<c.z2+ex){blocked=true;break;} }
         if(!blocked){ const gy=groundYAt(nx,nz,player.pos.y); if(gy!==null||Math.abs(player.pos.y-(groundYAt(player.pos.x,player.pos.z,player.pos.y)??player.pos.y))<0.01){ player.pos.x=nx; player.pos.z=nz; if(gy!==null)player.pos.y+=(gy-player.pos.y)*Math.min(1,dt*10); } } };
       tryMove(mv.x,0); tryMove(0,mv.z);
       if(speed>3&&Math.random()<dt*3)stepSound(0.12);
@@ -855,7 +900,7 @@ function animate(){ requestAnimationFrame(animate); const now=performance.now();
     else flash.intensity=0;
     if(S.battery<=0&&S.flashOn){ S.flashOn=false; subtitle('Батарейки фонаря сели. Свет теперь — только лампочки подъезда. Которые кто-то выкручивает.'); refreshInv(); }
     // лампочки мерцают
-    lampFlickerT-=dt; if(lampFlickerT<0){ lampFlickerT=0.08+Math.random()*0.3; const base=S.night===0?0:(S.stage==='n1_breaker'?0:4.5); lampLights.forEach((l,i)=>l.intensity=base*(0.82+Math.random()*0.35)); if(Math.random()<0.012)flickerBlackout=0.12; }
+    lampFlickerT-=dt; if(lampFlickerT<0){ lampFlickerT=0.08+Math.random()*0.3; const base=S.night===0?2.2:(S.stage==='n1_breaker'?0:4.5); lampLights.forEach((l,i)=>l.intensity=base*(0.82+Math.random()*0.35)); if(Math.random()<0.012)flickerBlackout=0.12; }
     if(flickerBlackout>0){ flickerBlackout-=dt; lampLights.forEach(l=>l.intensity=0); }
     // время
     timeAcc+=dt; if(timeAcc>4){ timeAcc=0; gameMinutes+=S.night===0?1:2; }
