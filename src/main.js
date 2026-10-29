@@ -111,7 +111,7 @@ const texSky=()=>textTex(512,256,(x,w,h)=>{ const g=x.createLinearGradient(0,0,0
   x.fillStyle='rgba(230,235,255,.9)'; x.beginPath(); x.arc(452,34,13,0,7); x.fill(); x.fillStyle='#0a1220'; x.beginPath(); x.arc(446,30,11,0,7); x.fill(); });
 
 function textTex(w,h,draw){ const c=document.createElement('canvas'); c.width=w; c.height=h; draw(c.getContext('2d'),w,h); const t=new THREE.CanvasTexture(c); t.magFilter=THREE.NearestFilter; t.colorSpace=THREE.SRGBColorSpace; return t; }
-function labelPlane(text,w,h,fg='#ddd',bg='rgba(20,20,20,0.85)',font=42){ const t=textTex(256,128,(x)=>{ x.fillStyle=bg; x.fillRect(0,0,256,128); x.fillStyle=fg; x.font=`bold ${font}px Courier New`; x.textAlign='center'; x.textBaseline='middle'; x.fillText(text,128,66); }); return new THREE.Mesh(new THREE.PlaneGeometry(w,h),new THREE.MeshBasicMaterial({map:t,transparent:true})); }
+function labelPlane(text,w,h,fg='#ddd',bg='rgba(20,20,20,0.85)',font=42){ const t=textTex(512,256,(x)=>{ x.fillStyle=bg; x.fillRect(0,0,512,256); x.fillStyle=fg; x.textAlign='center'; x.textBaseline='middle'; const lines=String(text).split('\n'); let fs=font*2; x.font=`bold ${fs}px Courier New`; const mw=Math.max(...lines.map(l=>x.measureText(l).width)); if(mw>492)fs=Math.floor(fs*492/mw); x.font=`bold ${fs}px Courier New`; const lh=fs*1.18, y0=128-(lines.length-1)*lh/2; lines.forEach((l,i)=>x.fillText(l,256,y0+i*lh)); }); return new THREE.Mesh(new THREE.PlaneGeometry(w,h),new THREE.MeshBasicMaterial({map:t,transparent:true})); }
 
 // ================= СЦЕНА =================
 const scene=new THREE.Scene(); scene.background=new THREE.Color(0x050505); scene.fog=new THREE.FogExp2(0x030303,0.055);
@@ -138,7 +138,7 @@ const M={
  fabric:std(texFabric,{roughness:1,bumpScale:0.1}),
  dark:new THREE.MeshStandardMaterial({color:0x1a1c1f,roughness:0.6,metalness:0.25}), black:new THREE.MeshBasicMaterial({color:0x020202}),
  metal:std(texMetal,{roughness:0.45,metalness:0.65,bumpScale:0.05}), pale:new THREE.MeshStandardMaterial({color:0xcbb99e,roughness:0.65}),
- dress:new THREE.MeshStandardMaterial({color:0x41322f,roughness:0.95}), coat:new THREE.MeshStandardMaterial({color:0x141519,roughness:0.9}),
+ dress:new THREE.MeshStandardMaterial({color:0x41322f,roughness:0.95}), coat:new THREE.MeshStandardMaterial({color:0x26242e,roughness:0.95}),
  paper:new THREE.MeshBasicMaterial({color:0xcfc7a8}), red:new THREE.MeshStandardMaterial({color:0x77231d,roughness:0.55}),
  tv:new THREE.MeshBasicMaterial({color:0x888888}), lampOn:new THREE.MeshBasicMaterial({color:0xffe9a8}), lampOff:new THREE.MeshBasicMaterial({color:0x333322}),
  glass:new THREE.MeshPhysicalMaterial({color:0xdfe8e2,roughness:0.08,metalness:0,transparent:true,opacity:0.32}),
@@ -200,13 +200,15 @@ function buildStairs(fi){
   addSurface(0,2,3,11,yTop); addSurface(-2,2,9,11,yTop);
   // ступени
   for(let i=0;i<10;i++){ const z=3.3+i*0.6, y=yBot+(i/10)*FH; box(2,0.16,0.62,M.concrete,-1,y,z); }
+  for(const sx of [-1.94,-0.06]){ const st=box(0.09,0.34,6.4,M.concrete,sx,(yBot+yTop)/2-0.22,6); st.rotation.x=-Math.atan2(FH,6); }
   box(2,0.18,2,M.concrete,1,yTop-0.09,7); box(4,0.18,2,M.concrete,0,yTop-0.09,10);
   // ограждения шахты
   wallBox(-2.12,(yBot+yTop)/2,7,0.24,FH+3,8,M.concrete); wallBox(2.12,(yBot+yTop)/2,7,0.24,FH+3,8,M.concrete);
   wallBox(0,(yBot+yTop)/2,11.12,4.5,FH+3,0.24,M.concrete);
   const mid=addCollider(-0.12,0.12,3,9,yBot-0.4,yTop+2.6); // стена между маршами
-  box(0.1,1.0,6,M.metal,-0.0,(yBot+yTop)/2+0.8,6); // перила-разделитель (визуально)
-  box(0.08,0.9,6,M.metal,-1.92,(yBot+yTop)/2+0.7,6);
+  // наклонные перила вместо глухих панелей: поручень по уклону марша + стойки
+  tube([0,yBot+1.04,3.2],[0,yTop+1.04,8.8],0.032,M.metal); tube([-1.92,yBot+1.04,3.2],[-1.92,yTop+1.04,8.8],0.032,M.metal);
+  for(let bi=0;bi<7;bi++){ const bz=3.45+bi*0.85, by=yBot+((bz-3)/6)*FH; tube([0,by+0.03,bz],[0,by+1.0,bz],0.013,M.metal); tube([-1.92,by+0.03,bz],[-1.92,by+1.0,bz],0.013,M.metal); }
   if(fi===5){ // ворота на «чердак/шестой»
     const g=box(1.9,2.2,0.12,M.metal,-1,yBot+1.1,3.15); sixthGate.mesh=g; sixthGate.col=addCollider(-2,0,2.9,3.4,yBot,yBot+2.4);
     const lp=labelPlane('ЧЕРДАК',0.9,0.3,'#ddd','rgba(0,0,0,.8)',44); lp.position.set(-1,yBot+2.45,3.05); world.add(lp);
@@ -234,7 +236,9 @@ wallBox(12,APT_Y+1.5,-7.12,14.5,3,0.25,M.wallpaper); wallBox(12,APT_Y+1.5,7.12,1
 // перегородки: прихожая x5-9; кухня z<-2; ванная z>2; гостиная/спальня x>10
 wallBox(10,APT_Y+1.5,-4.5,0.22,3,5,M.wallpaper); wallBox(5.75,APT_Y+1.5,-2,1.5,3,0.22,M.wallpaper); wallBox(9.25,APT_Y+1.5,-2,1.5,3,0.22,M.wallpaper);
 wallBox(10,APT_Y+1.5,4.5,0.22,3,5,M.wallpaper); wallBox(5.75,APT_Y+1.5,2,1.5,3,0.22,M.wallpaper); wallBox(9.25,APT_Y+1.5,2,1.5,3,0.22,M.wallpaper);
-wallBox(14.5,APT_Y+1.5,0,9,3,0.22,M.wallpaper);
+wallBox(11.15,APT_Y+1.5,0,2.3,3,0.22,M.wallpaper); wallBox(16.15,APT_Y+1.5,0,5.7,3,0.22,M.wallpaper);
+box(0.1,2.1,0.3,M.door,12.32,APT_Y+1.05,0); box(0.1,2.1,0.3,M.door,13.28,APT_Y+1.05,0); box(1.06,0.12,0.3,M.door,12.8,APT_Y+2.14,0);
+const bedDoor=box(0.05,2.0,0.9,M.door,12.42,APT_Y+1.0,0.48); bedDoor.rotation.y=0.5;
 // проёмы в перегородках перекрываем «невидимыми» проходами: перегородки выше уже цельные — делаем двери-порталы телепортом не нужно: оставим проёмы за счёт укорочения:
 // (стены x=10 имеют длину 5 при пролёте 5 — проём у прихожей z -2..2 свободен)
 wallBox(5,APT_Y+1.5,-5,0.25,3,4,M.wallpaper); wallBox(5,APT_Y+1.5,5,0.25,3,4,M.wallpaper);
@@ -260,12 +264,13 @@ addCollider(15.3,17.7,3.8,5.4,APT_Y,APT_Y+1); addCollider(11,13.4,-6, -5,APT_Y,A
 // квартира 43 (запад, 5 этаж)
 addSurface(-13,-5,-3,3,APT_Y); box(8,0.2,6,M.floor,-9,APT_Y-0.1,0); box(8,0.2,6,M.concrete,-9,APT_Y+3.05,0);
 wallBox(-13.12,APT_Y+1.5,0,0.25,3,6,M.wallpaper); wallBox(-9,APT_Y+1.5,-3.12,8.5,3,0.25,M.wallpaper); wallBox(-9,APT_Y+1.5,3.12,8.5,3,0.25,M.wallpaper);
-const tv43=box(1.0,0.8,0.7,M.dark,-12,APT_Y+0.8,0); const tv43s=box(0.8,0.55,0.04,M.tv,-11.62,APT_Y+0.82,0);
+box(1.4,0.42,0.95,M.door,-12,APT_Y+0.21,0);
+const tv43=box(1.0,0.8,0.7,M.dark,-12,APT_Y+0.84,0); const tv43s=box(0.04,0.55,0.8,M.tv,-11.48,APT_Y+0.86,0);
 box(1.8,0.6,0.8,new THREE.MeshLambertMaterial({color:0x4a3b2c}),-8,APT_Y+0.3,2);
 // квартира 38 (1 этаж)
 addSurface(5,13,-3,3,0); box(8,0.2,6,M.floor,9,-0.1,0); box(8,0.2,6,M.concrete,9,3.05,0);
 wallBox(13.12,1.5,0,0.25,3,6,M.wallpaper); wallBox(9,1.5,-3.12,8.5,3,0.25,M.wallpaper); wallBox(9,1.5,3.12,8.5,3,0.25,M.wallpaper);
-box(1.6,0.7,0.9,M.door,10,0.35,1.5); const koliaBody=box(0.55,1.1,0.5,M.coat,10,0.75,1.4); koliaBody.rotation.x=0.5;
+box(1.6,0.7,0.9,M.door,10,0.35,1.5); const koliaBody=box(0.55,1.1,0.5,M.coat,10.7,0.3,0.1); koliaBody.rotation.z=Math.PI/2; koliaBody.rotation.y=0.25;
 // подвал-котельная (восток, y=-3)
 addSurface(5,15,-4,4,-3); box(10,0.2,8,M.concrete,10,-3.1,0); box(10,0.2,8,M.concrete,10,0.05,0);
 wallBox(15.12,-1.5,0,0.25,3,8,M.concrete); wallBox(10,-1.5,-4.12,10.5,3,0.25,M.concrete); wallBox(10,-1.5,4.12,10.5,3,0.25,M.concrete);
@@ -348,9 +353,9 @@ function radiator(x,y,z,ry=0,parent=world){ const g=new THREE.Group(); g.positio
   // прихожая: вешалка с пальто и зеркало
   box(1.3,0.5,0.05,M.door,7.6,Y+1.78,1.96);
   for(let i=0;i<4;i++) sph(0.035,M.metal,7.15+i*0.3,Y+1.62,1.9);
-  const coatPts=new THREE.SplineCurve([[0.02,0],[0.3,0.03],[0.27,0.3],[0.2,0.68],[0.24,0.9],[0.05,0.97]].map(p=>new THREE.Vector2(p[0],p[1]))).getPoints(32);
-  const coatMesh=new THREE.Mesh(new THREE.LatheGeometry(coatPts,64),M.coat); coatMesh.position.set(7.75,Y+0.52,1.88); coatMesh.castShadow=true; coatMesh.receiveShadow=true; world.add(coatMesh);
-  const coatSh=sph(0.14,M.coat,7.75,Y+1.47,1.88); coatSh.scale.set(1.25,0.5,0.8);
+  const coatPts=new THREE.SplineCurve([[0.16,0],[0.19,0.06],[0.17,0.35],[0.145,0.62],[0.185,0.85],[0.2,0.92],[0.03,0.98]].map(p=>new THREE.Vector2(p[0],p[1]))).getPoints(32);
+  const coatMesh=new THREE.Mesh(new THREE.LatheGeometry(coatPts,64),M.coat); coatMesh.position.set(7.75,Y+0.6,1.9); coatMesh.scale.z=0.62; coatMesh.castShadow=true; coatMesh.receiveShadow=true; world.add(coatMesh);
+  const coatSh=sph(0.13,M.coat,7.75,Y+1.52,1.9); coatSh.scale.set(1.3,0.45,0.6);
   box(0.6,0.9,0.03,M.metal,9.85,Y+1.5,-1.2);
   // дисковый телефон: диск и трубка
   cyl(0.13,0.15,0.04,new THREE.MeshStandardMaterial({color:0xd8cfb8,roughness:0.4}),11.2,Y+1.06,-6.4,world,18).rotation.x=0.5;
@@ -410,7 +415,7 @@ function radiator(x,y,z,ry=0,parent=world){ const g=new THREE.Group(); g.positio
   const N=2600, pos=new Float32Array(N*3);
   for(let i=0;i<N;i++){ if(i%2){ pos[i*3]=-4+Math.random()*22; pos[i*3+1]=Math.random()*15; pos[i*3+2]=-6+Math.random()*12; } else { pos[i*3]=-4+Math.random()*8; pos[i*3+1]=Math.random()*17; pos[i*3+2]=-2+Math.random()*12; } }
   const dg=new THREE.BufferGeometry(); dg.setAttribute('position',new THREE.BufferAttribute(pos,3));
-  dustPoints=new THREE.Points(dg,new THREE.PointsMaterial({color:0xffe6b8,size:0.013,transparent:true,opacity:0.28,depthWrite:false}));
+  dustPoints=new THREE.Points(dg,new THREE.PointsMaterial({color:0xffe6b8,size:0.01,transparent:true,opacity:0.15,depthWrite:false}));
   scene.add(dustPoints);
 })();
 
@@ -420,7 +425,8 @@ function radiator(x,y,z,ry=0,parent=world){ const g=new THREE.Group(); g.positio
 // Модели: trebeljahr/quaternius-showcase -> house_interior_pack. Посадка — строго по
 // bounding box: низ модели ставится на заданную поверхность (пол/стол/потолок), центр — в точку.
 const gltfLoader=new GLTFLoader(); const gltfCache={};
-function removeAt(x,y,z){ const v=new THREE.Vector3(x,y,z); for(const ch of [...world.children]) if(ch.position.distanceTo(v)<0.03) world.remove(ch); }
+function removeAt(x,y,z){ const v=new THREE.Vector3(x,y,z); for(const ch of [...world.children]) if(ch.position.distanceTo(v)<0.03) world.remove(ch);
+  for(const c of colliders){ if(!c.enabled)continue; const cx=(c.x1+c.x2)/2, cz=(c.z1+c.z2)/2; if(Math.abs(cx-x)<0.85&&Math.abs(cz-z)<0.85&&y>c.y1-0.7&&y<c.y2+0.7) c.enabled=false; } }
 async function placeModel(file,cfg){
   try{
     if(!gltfCache[file]) gltfCache[file]=await gltfLoader.loadAsync('./models/quaternius/'+file);
@@ -455,6 +461,8 @@ async function placeModel(file,cfg){
   removeAt(18.75,Y,-1.5);                                       // сервант-примитив (его заменяет Bookshelf)
   removeAt(-8,Y+0.3,2);                                         // диван в 43-й
   removeAt(-8,Y+0.25,1.2);                                      // опрокинутый стул-примитив в 43-й
+  removeAt(15.4,Y,-3.4);                                        // стул-примитив у телевизора (дубль GLB-стула)
+  removeAt(6.2,Y+0.38,6.3); removeAt(6.2,Y+0.8,6.3);            // раковина-примитив (дубль GLB-раковины)
   const P=(f,c)=>placeModel(f,c);
   // гостиная 47-й
   P('Couch_Medium1.glb',{x:12.2,z:-5.5,len:2.3,ry:Math.PI/2});
@@ -464,8 +472,8 @@ async function placeModel(file,cfg){
   const bookCols2=[0x7a2e22,0x22406e,0x2e5d33,0x77622a,0x4a2440,0x885838,0x33555e];
   for(const lvl of [0.42,1.02,1.58]){ let bz=-2.32; while(bz<-0.85){ const bw=0.04+Math.random()*0.045,bh=0.24+Math.random()*0.13; const bm=new THREE.MeshStandardMaterial({color:bookCols2[Math.floor(Math.random()*bookCols2.length)],roughness:0.85}); const bk=box(0.15,bh,bw,bm,18.8,Y+lvl+bh/2,bz+bw/2); if(Math.random()<.15)bk.rotation.x=0.1; bz+=bw+0.006; } }
   for(const [gx,gz] of [[18.8,-0.78],[18.8,-0.7]]) cyl(0.03,0.045,0.13,M.glass,gx,Y+1.65,gz,world,16);
-  P('Shelf_Small1.glb',{x:18.9,z:-4.5,h:0.5,y:Y+1.15,ry:-Math.PI/2});
-  P('Light_Floor1.glb',{x:11.15,z:-6.25,h:1.55});
+  P('Shelf_Small1.glb',{x:18.84,z:-4.5,h:0.5,y:Y+1.15,ry:Math.PI/2});
+  P('Light_Floor1.glb',{x:10.75,z:-4.5,h:1.55});
   P('Houseplant_1.glb',{x:13.15,z:5.55,h:0.8});
   P('Carpet_1.glb',{x:14.8,z:-3.3,len:3.1,y:Y+0.095});
   P('Curtains_Double.glb',{x:14.5,z:6.78,len:2.9,topY:Y+2.78});
@@ -490,8 +498,7 @@ async function placeModel(file,cfg){
   P('Light_Chandelier.glb',{x:8.2,z:-4.6,h:0.55,topY:Y+3.0});
   // ванная
   P('Bathroom_Bathtub.glb',{x:7.4,z:5.55,len:1.8,ry:Math.PI/2});
-  P('Bathroom_Sink.glb',{x:6.2,z:6.3,h:0.86,ry:Math.PI});
-  P('Bathroom_Mirror1.glb',{x:6.2,z:6.88,h:0.72,y:Y+1.12,ry:Math.PI});
+  P('Bathroom_Sink.glb',{x:6.2,z:6.58,h:0.86,ry:Math.PI});
   P('Bathroom_Toilet.glb',{x:9.3,z:3.2,h:0.78,ry:-Math.PI/2});
   P('Bathroom_WashingMachine.glb',{x:9.3,z:6.35,h:0.86,ry:-Math.PI/2});
   // квартира 43 (тётя Люда)
@@ -503,7 +510,7 @@ async function placeModel(file,cfg){
   P('Trashcan_Small1.glb',{x:14.2,z:3.3,h:0.42,y:-3});
   // коллайдеры под крупные модели
   addCollider(18.35,19,-2.7,-0.3,Y,Y+1.95); addCollider(8.15,9.45,-4.85,-3.55,Y,Y+0.8);
-  addCollider(5.65,6.75,-7,-5.9,Y,Y+1.8); addCollider(6.6,8.3,4.65,6.45,Y,Y+0.9); addCollider(6.65,7.75,-5.85,-4.75,Y,Y+0.9);
+  addCollider(5.65,6.75,-7,-5.9,Y,Y+1.8); addCollider(6.6,8.3,4.65,6.45,Y,Y+0.9); addCollider(6.8,9.35,-6.98,-6.02,Y,Y+0.95); addCollider(15.55,17.85,0.28,0.98,Y,Y+0.9); addCollider(-8.95,-7.05,1.15,3.05,Y,Y+0.95);
 })();
 
 // ---------- ИСПРАВЛЕНИЯ: свет в квартирах, зеркало, чайник, выход на улицу ----------
@@ -522,7 +529,7 @@ const entranceDoor=makeDoor(-4.92,0,-0.5,0);
   fixture(9,2.96,0); aptLight(9,2.5,0,9);             // квартира 38
   const bl=new THREE.PointLight(0xffa050,2.5,11,1.6); bl.position.set(10,-0.8,0); scene.add(bl); // котельная
   // зеркало в ванной: отражающая поверхность поверх тёмной GLB-заготовки
-  box(0.52,0.66,0.02,new THREE.MeshStandardMaterial({color:0x9fb4ac,roughness:0.16,metalness:0.85}),6.2,Y+1.48,6.845);
+  box(0.52,0.66,0.02,new THREE.MeshStandardMaterial({color:0x9fb4ac,roughness:0.16,metalness:0.85}),6.2,Y+1.5,6.93);
   // чайник на новой плите
   const kettle2=sph(0.13,M.metal,7.55,Y+0.95,-6.55); kettle2.scale.y=0.85;
   const spout=cyl(0.018,0.032,0.1,M.metal,7.68,Y+1.0,-6.55,world,16); spout.rotation.z=-0.7;
@@ -889,7 +896,7 @@ function animate(){ requestAnimationFrame(animate); const now=performance.now();
     // Стоящий
     if(standingActive&&standing.visible){ standing.position.copy(standingPos); standing.position.y=standingPos.y;
       // стоит спиной к игроку
-      standing.lookAt(player.pos.x,standingPos.y,player.pos.z); standing.rotateY(Math.PI);
+      standing.lookAt(player.pos.x,standingPos.y,player.pos.z);
       const toS=standingPos.clone().sub(player.pos); const dist=toS.length();
       const lookDir=new THREE.Vector3(); camera.getWorldDirection(lookDir); const looking=dist<24&&lookDir.dot(toS.clone().normalize())>0.82;
       const inDark=flickerBlackout>0;
@@ -910,7 +917,7 @@ function animate(){ requestAnimationFrame(animate); const now=performance.now();
     // тишина в квартире вредит ночью, телевизор лечит
     if(S.night>=1&&inApt()&&!S.tvOn)setSanity(S.sanity-dt*0.55); if(S.tvOn&&inApt())setSanity(S.sanity+dt*0.8);
     // триггеры этажей/квартиры
-    if(S.stage==='n1_breaker'&&player.pos.y<6&&!standingActive){ activateStanding(0.7); subtitle('На пролёте между этажами кто-то стоит. Спиной. Не двигается, пока ты смотришь.'); }
+    if(S.stage==='n1_breaker'&&player.pos.y<6&&!standingActive){ activateStanding(0.7); subtitle('На пролёте между этажами кто-то стоит. И смотрит. Не двигается, пока ты смотришь.'); }
     if((S.stage==='n1_return'||S.stage==='n2_return'||S.stage==='n4_return')&&inApt()){ standingActive=false; standing.visible=false; door47.setOpen(false);
       if(S.stage==='n1_return')setStage('n1_knock'),startKnock('grandma'); else if(S.stage==='n2_return')setStage('n2_knock'),startKnock('lyuda'); else setStage('n4_sleep'); }
     if(leaveTimer>0){ leaveTimer-=dt; if(leaveTimer<=0){ hostess.visible=false; endKnock(); } }
