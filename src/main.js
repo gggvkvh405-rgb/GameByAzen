@@ -147,7 +147,7 @@ const surfaces=[], colliders=[], interactables=[], lamps=[];
 function addSurface(x1,x2,z1,z2,y){ surfaces.push({x1,x2,z1,z2,y}); }
 function groundYAt(x,z,refY){ let best=null,bd=1e9; for(const s of surfaces){ if(x>=s.x1&&x<=s.x2&&z>=s.z1&&z<=s.z2){ const y=typeof s.y==='function'?s.y(x,z):s.y; const d=Math.abs(y-refY); if(d<bd){bd=d;best=y;} } } return bd<2.1?best:null; }
 function addCollider(x1,x2,z1,z2,y1,y2){ const c={x1,x2,z1,z2,y1,y2,enabled:true}; colliders.push(c); return c; }
-function box(w,h,d,mat,x,y,z,parent=world){ const rad=Math.max(0.001,Math.min(0.03,Math.min(w,h,d)*0.24)); const m=new THREE.Mesh(new RoundedBoxGeometry(w,h,d,4,rad),mat); m.position.set(x,y,z); m.castShadow=true; m.receiveShadow=true; parent.add(m); return m; }
+function box(w,h,d,mat,x,y,z,parent=world){ const rad=Math.max(0.001,Math.min(0.03,Math.min(w,h,d)*0.24)); const m=new THREE.Mesh(new RoundedBoxGeometry(w,h,d,7,rad),mat); m.position.set(x,y,z); m.castShadow=true; m.receiveShadow=true; parent.add(m); return m; }
 function wallBox(cx,cy,cz,w,h,d,mat=M.concrete){ const m=box(w,h,d,mat,cx,cy,cz); addCollider(cx-w/2,cx+w/2,cz-d/2,cz+d/2,cy-h/2,cy+h/2); return m; }
 function addInteract(obj){ interactables.push(obj); }
 
@@ -283,9 +283,9 @@ const rulesPlane=labelPlane('ПРАВИЛА ДОМА',1.0,0.55,'#2a2a22','rgba(2
 
 // ================= ДЕТАЛЬНЫЕ МОДЕЛИ (мебель, мелочи, пыль) =================
 let dustPoints=null;
-function cyl(r1,r2,h,mat,x,y,z,parent=world,seg=36){ const m=new THREE.Mesh(new THREE.CylinderGeometry(r1,r2,h,seg),mat); m.position.set(x,y,z); m.castShadow=true; m.receiveShadow=true; parent.add(m); return m; }
-function sph(r,mat,x,y,z,parent=world){ const m=new THREE.Mesh(new THREE.SphereGeometry(r,44,30),mat); m.position.set(x,y,z); m.castShadow=true; m.receiveShadow=true; parent.add(m); return m; }
-function tube(a,b,r,mat,parent=world){ const A=new THREE.Vector3(...a),B=new THREE.Vector3(...b); const d=B.clone().sub(A); const m=new THREE.Mesh(new THREE.CylinderGeometry(r,r,d.length(),24),mat); m.position.copy(A).addScaledVector(d,0.5); m.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),d.normalize()); m.castShadow=true; parent.add(m); return m; }
+function cyl(r1,r2,h,mat,x,y,z,parent=world,seg=64){ const m=new THREE.Mesh(new THREE.CylinderGeometry(r1,r2,h,seg),mat); m.position.set(x,y,z); m.castShadow=true; m.receiveShadow=true; parent.add(m); return m; }
+function sph(r,mat,x,y,z,parent=world){ const m=new THREE.Mesh(new THREE.SphereGeometry(r,80,56),mat); m.position.set(x,y,z); m.castShadow=true; m.receiveShadow=true; parent.add(m); return m; }
+function tube(a,b,r,mat,parent=world){ const A=new THREE.Vector3(...a),B=new THREE.Vector3(...b); const d=B.clone().sub(A); const m=new THREE.Mesh(new THREE.CylinderGeometry(r,r,d.length(),48),mat); m.position.copy(A).addScaledVector(d,0.5); m.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),d.normalize()); m.castShadow=true; parent.add(m); return m; }
 function chair(x,y,z,ry,parent=world){ const g=new THREE.Group(); g.position.set(x,y,z); g.rotation.y=ry; parent.add(g); const wood=M.door;
   for(const [lx,lz] of [[-.19,-.19],[.19,-.19],[-.19,.19],[.19,.19]]) cyl(0.022,0.018,0.45,wood,lx,0.225,lz,g,20);
   box(0.46,0.04,0.46,wood,0,0.46,0,g);
@@ -500,64 +500,101 @@ async function placeModel(file,cfg){
   addCollider(5.65,6.75,-7,-5.9,Y,Y+1.8); addCollider(6.6,8.3,4.65,6.45,Y,Y+0.9); addCollider(6.65,7.75,-5.85,-4.75,Y,Y+0.9);
 })();
 
-// сущности
+// сущности — высокополигональные модели: сглаженные силуэты (Lathe 192 сегмента),
+// детализированные лица: белок/радужка/зрачок/блик, веки, ресницы, нос, губы, скулы, челюсть
 function makeFigure(dress=false,coatColor=null,opts={}){
   const g=new THREE.Group();
   const coatMat=new THREE.MeshStandardMaterial({map:texFabric,color:coatColor!==null?coatColor:0x62656f,roughness:0.96});
   const dressMat=new THREE.MeshStandardMaterial({map:texFabric,color:0xa87a68,roughness:1});
-  const skin=new THREE.MeshStandardMaterial({color:0xc7a583,roughness:0.65});
+  const skin=new THREE.MeshStandardMaterial({color:0xc79b74,roughness:0.72});
+  const skinDark=new THREE.MeshStandardMaterial({color:0xa87c5e,roughness:0.75});
   const hairM=new THREE.MeshStandardMaterial({color:dress?0x8a8378:0x191919,roughness:0.95});
+  const eyeWhite=new THREE.MeshStandardMaterial({color:0xe9e2d6,roughness:0.2});
+  const irisM=new THREE.MeshStandardMaterial({color:0x2e1a0c,roughness:0.25});
+  const pupilM=new THREE.MeshBasicMaterial({color:0x040404});
+  const glintM=new THREE.MeshBasicMaterial({color:0xffffff});
+  const lipM=new THREE.MeshStandardMaterial({color:0x96604f,roughness:0.6});
+  const darkM=new THREE.MeshStandardMaterial({color:0x14100d,roughness:0.9});
   function part(geo,mat,x,y,z,parent=g){ const m=new THREE.Mesh(geo,mat); m.position.set(x,y,z); m.castShadow=true; m.receiveShadow=true; parent.add(m); return m; }
-  if(dress){
-    // платье — силуэт через LatheGeometry
-    const pts=[]; [[0.02,0],[0.34,0.02],[0.38,0.18],[0.26,0.6],[0.2,0.95],[0.21,1.15],[0.16,1.32],[0.05,1.38]].forEach(p=>pts.push(new THREE.Vector2(p[0],p[1])));
-    part(new THREE.LatheGeometry(pts,80),dressMat,0,0,0);
-    part(new THREE.SphereGeometry(0.155,44,30),dressMat,0,1.38,0).scale.set(1.25,0.55,0.9); // плечи
-    // длинные руки: плечо+предплечье капсулами, кисти
-    for(const side of [-1,1]){ const a=part(new THREE.CapsuleGeometry(0.046,0.34,14,28),dressMat,side*0.24,1.08,0); a.rotation.z=side*0.1;
-      const f=part(new THREE.CapsuleGeometry(0.038,0.32,14,28),dressMat,side*0.28,0.62,0.01); f.rotation.z=side*0.06;
-      const hand=part(new THREE.SphereGeometry(0.05,44,30),skin,side*0.29,0.36,0.02); hand.scale.set(0.75,1.5,0.4);
-      for(let fi2=0;fi2<3;fi2++){ const fg=part(new THREE.CapsuleGeometry(0.008,0.06,14,28),skin,side*0.29+(fi2-1)*0.02,0.27,0.03); } }
-    const legL=part(new THREE.CapsuleGeometry(0.045,0.3,14,28),skin,-0.1,0.19,0); const legR=part(new THREE.CapsuleGeometry(0.045,0.3,14,28),skin,0.1,0.19,0);
-    // фартук поверх платья
-    const apron=part(new THREE.BoxGeometry(0.27,0.52,0.018),new THREE.MeshStandardMaterial({map:texFabric,color:0xb8b0a0,roughness:1}),0,0.82,0.235); apron.rotation.x=0.06;
-    part(new THREE.BoxGeometry(0.09,0.04,0.2),M.dark,-0.1,0.02,0.04); part(new THREE.BoxGeometry(0.09,0.04,0.2),M.dark,0.1,0.02,0.04);
-  } else {
-    // пальто — LatheGeometry: подол шире, талия уже
-    const pts=[]; [[0.02,0.55],[0.24,0.56],[0.27,0.8],[0.2,1.15],[0.19,1.4],[0.24,1.52],[0.05,1.56]].forEach(p=>pts.push(new THREE.Vector2(p[0],p[1])));
-    part(new THREE.LatheGeometry(pts,80),coatMat,0,0,0);
-    part(new THREE.SphereGeometry(0.16,44,30),coatMat,0,1.5,0).scale.set(1.35,0.55,0.95); // плечи
-    part(new THREE.CylinderGeometry(0.19,0.21,0.12,14),coatMat,0,1.56,0); // воротник
-    for(const side of [-1,1]){ const a=part(new THREE.CapsuleGeometry(0.05,0.36,14,28),coatMat,side*0.27,1.24,0); a.rotation.z=side*0.08;
-      const f=part(new THREE.CapsuleGeometry(0.042,0.32,14,28),coatMat,side*0.3,0.82,0.01); f.rotation.z=side*0.05;
-      part(new THREE.SphereGeometry(0.048,44,30),skin,side*0.31,0.55,0.02).scale.set(0.8,1.3,0.45); }
-    part(new THREE.CylinderGeometry(0.205,0.22,0.055,36),new THREE.MeshStandardMaterial({color:0x1c1410,roughness:0.55}),0,1.12,0); // ремень
-    for(const side of [-1,1]){ part(new THREE.CapsuleGeometry(0.062,0.4,14,28),new THREE.MeshStandardMaterial({color:opts.jeans?0x2e405c:0x101114,roughness:opts.jeans?0.85:0.9}),side*0.11,0.27,0);
-      part(new THREE.BoxGeometry(0.11,0.05,0.24),M.dark,side*0.11,0.025,0.05); }
-    // пуговицы
-    for(let bi=0;bi<3;bi++) part(new THREE.SphereGeometry(0.016,44,30),M.metal,0,1.32-bi*0.22,0.195);
+  // гладкий силуэт одежды: профиль-сплайн -> LatheGeometry 192 сегмента
+  function lathe(profile,mat){ const pts=new THREE.SplineCurve(profile.map(p=>new THREE.Vector2(p[0],p[1]))).getPoints(64); return part(new THREE.LatheGeometry(pts,192),mat,0,0,0); }
+  function shoe(x){ part(new RoundedBoxGeometry(0.105,0.055,0.25,5,0.02),M.dark,x,0.028,0.045); const toe=part(new THREE.SphereGeometry(0.05,48,32),M.dark,x,0.028,0.16); toe.scale.set(1.02,0.55,1.05); }
+  function buildArm(sleeveMat,sy){ // рука с суставами, кистью и пальцами; sy — высота плеча
+    for(const side of [-1,1]){
+      const sh=part(new THREE.SphereGeometry(0.06,48,32),sleeveMat,side*0.235,sy,0); sh.scale.set(1,1.15,1);
+      const up=part(new THREE.CapsuleGeometry(0.049,0.3,24,64),sleeveMat,side*0.262,sy-0.21,0.002); up.rotation.z=side*0.09;
+      const el=part(new THREE.SphereGeometry(0.043,48,32),sleeveMat,side*0.288,sy-0.42,0.006);
+      const fo=part(new THREE.CapsuleGeometry(0.04,0.28,24,64),sleeveMat,side*0.298,sy-0.62,0.01); fo.rotation.z=side*0.05;
+      const cuff=part(new THREE.CylinderGeometry(0.047,0.05,0.055,48),sleeveMat,side*0.303,sy-0.79,0.014);
+      const palm=part(new THREE.SphereGeometry(0.047,64,48),skin,side*0.306,sy-0.9,0.018); palm.scale.set(0.74,1.3,0.4);
+      for(let fi=0;fi<4;fi++){ const fg=part(new THREE.CapsuleGeometry(0.0072,0.042,10,24),skin,side*0.306+(fi-1.5)*0.0165,sy-1.0,0.022); fg.rotation.z=(fi-1.5)*0.07; }
+      const th=part(new THREE.CapsuleGeometry(0.008,0.034,10,24),skin,side*0.306-side*0.032,sy-0.9,0.03); th.rotation.z=side*0.8;
+    }
   }
-  // голова на шарнире (для наклона Хозяйки)
-  const headPivot=new THREE.Group(); headPivot.position.y=1.56; g.add(headPivot);
-  const head=part(new THREE.SphereGeometry(0.145,44,30),skin,0,0.13,0,headPivot); head.scale.set(0.88,1.12,0.95);
-  const hair=part(new THREE.SphereGeometry(0.15,48,32,0,Math.PI*2,0,1.65),hairM,0,0.155,-0.012,headPivot); hair.scale.set(0.92,1.05,0.98);
-  if(dress){ const bun=part(new THREE.SphereGeometry(0.07,44,30),hairM,0,0.26,-0.1,headPivot); }
-  for(const side of [-1,1]){ const ear=part(new THREE.SphereGeometry(0.028,20,14),skin,side*0.128,0.12,0,headPivot); ear.scale.set(0.5,1,0.7);
-    const brow=part(new THREE.BoxGeometry(0.046,0.009,0.01),hairM,side*0.052,0.198,0.126,headPivot); brow.rotation.z=side*0.18;
-    const shadowE=part(new THREE.SphereGeometry(0.023,20,14),new THREE.MeshStandardMaterial({color:0x8a6a52,roughness:0.9}),side*0.052,0.112,0.12,headPivot); shadowE.scale.set(1.25,0.55,0.35); }
+  if(dress){
+    lathe([[0.02,0],[0.3,0.01],[0.36,0.1],[0.335,0.3],[0.245,0.62],[0.19,0.95],[0.195,1.12],[0.22,1.28],[0.165,1.38],[0.06,1.42]],dressMat);
+    const shoulders=part(new THREE.SphereGeometry(0.16,96,64),dressMat,0,1.4,0); shoulders.scale.set(1.28,0.55,0.92);
+    buildArm(dressMat,1.34);
+    for(const side of [-1,1]){ part(new THREE.CapsuleGeometry(0.043,0.3,24,64),skin,side*0.1,0.2,0); shoe(side*0.1); }
+    // фартук: полотно, бретели, карман
+    const apron=part(new RoundedBoxGeometry(0.27,0.52,0.02,4,0.008),new THREE.MeshStandardMaterial({map:texFabric,color:0xb8b0a0,roughness:1}),0,0.82,0.225); apron.rotation.x=0.05;
+    for(const side of [-1,1]){ const st=part(new THREE.BoxGeometry(0.045,0.34,0.012),apron.material,side*0.08,1.22,0.185); st.rotation.x=0.12; }
+    part(new THREE.BoxGeometry(0.13,0.1,0.012),apron.material,0,0.68,0.245);
+    const collar=part(new THREE.TorusGeometry(0.078,0.015,20,72),new THREE.MeshStandardMaterial({color:0xd8cfc0,roughness:0.9}),0,1.44,0.045); collar.rotation.x=1.25;
+  } else {
+    lathe([[0.02,0.5],[0.235,0.51],[0.26,0.68],[0.228,0.95],[0.198,1.2],[0.202,1.38],[0.24,1.5],[0.17,1.57],[0.05,1.6]],coatMat);
+    const shoulders=part(new THREE.SphereGeometry(0.165,96,64),coatMat,0,1.52,0); shoulders.scale.set(1.3,0.55,0.94);
+    part(new THREE.CylinderGeometry(0.112,0.152,0.085,96),coatMat,0,1.545,0); // воротник
+    for(const side of [-1,1]){ const lap=part(new RoundedBoxGeometry(0.075,0.24,0.016,3,0.006),coatMat,side*0.078,1.4,0.178); lap.rotation.set(0.08,-side*0.38,side*0.14); } // лацканы
+    buildArm(coatMat,1.46);
+    part(new THREE.CylinderGeometry(0.208,0.222,0.055,96),new THREE.MeshStandardMaterial({color:0x1c1410,roughness:0.55}),0,1.12,0); // ремень
+    part(new RoundedBoxGeometry(0.075,0.048,0.018,3,0.005),M.metal,0,1.12,0.212); // пряжка
+    for(let bi=0;bi<3;bi++) part(new THREE.SphereGeometry(0.017,48,32),M.metal,0,1.34-bi*0.24,0.196); // пуговицы
+    for(const side of [-1,1]){ const pk=part(new THREE.BoxGeometry(0.095,0.032,0.014),coatMat,side*0.145,0.96,0.168); pk.rotation.y=-side*0.5; } // карманы
+    const legMat=new THREE.MeshStandardMaterial({map:opts.jeans?texFabric:null,color:opts.jeans?0x2e405c:0x101114,roughness:opts.jeans?0.85:0.9});
+    for(const side of [-1,1]){ part(new THREE.CapsuleGeometry(0.063,0.42,24,64),legMat,side*0.11,0.28,0); shoe(side*0.11); }
+  }
+  // ---------- голова ----------
+  const headPivot=new THREE.Group(); headPivot.position.y=dress?1.6:1.63; g.add(headPivot);
+  part(new THREE.CylinderGeometry(0.053,0.064,0.13,64),skin,0,-0.01,0,headPivot); // шея
+  const skull=part(new THREE.SphereGeometry(0.145,128,96),skin,0,0.14,0,headPivot); skull.scale.set(0.9,1.12,0.97);
+  const jaw=part(new THREE.SphereGeometry(0.112,96,72),skin,0,0.048,0.014,headPivot); jaw.scale.set(0.84,0.92,0.88); // челюсть и подбородок
+  for(const side of [-1,1]){ const cheek=part(new THREE.SphereGeometry(0.042,64,48),skin,side*0.06,0.072,0.088,headPivot); cheek.scale.set(1,0.85,0.75); } // скулы
+  // глаза: белок, радужка, зрачок, блик, веко, ресницы, мешки под глазами
+  for(const side of [-1,1]){
+    const bag=part(new THREE.SphereGeometry(0.02,48,32),skinDark,side*0.053,0.116,0.118,headPivot); bag.scale.set(1.35,0.5,0.35);
+    part(new THREE.SphereGeometry(0.0245,64,48),eyeWhite,side*0.053,0.155,0.114,headPivot).scale.set(1,1.12,0.78);
+    part(new THREE.SphereGeometry(0.0135,48,32),irisM,side*0.053,0.155,0.131,headPivot).scale.set(1,1.05,0.5);
+    part(new THREE.SphereGeometry(0.0068,32,24),pupilM,side*0.053,0.155,0.139,headPivot).scale.set(1,1,0.5);
+    part(new THREE.SphereGeometry(0.0034,16,12),glintM,side*0.053+0.005,0.162,0.143,headPivot);
+    const lid=part(new THREE.SphereGeometry(0.027,64,48,0,Math.PI*2,0,1.3),skin,side*0.053,0.157,0.113,headPivot); lid.rotation.x=-0.42; lid.scale.set(1.06,1.05,0.82);
+    const lash=part(new THREE.TorusGeometry(0.0265,0.0032,12,64,Math.PI),darkM,side*0.053,0.16,0.128,headPivot); lash.rotation.x=-0.28;
+    const brow=part(new THREE.CapsuleGeometry(0.0068,0.034,10,32),hairM,side*0.054,0.208,0.117,headPivot); brow.rotation.z=Math.PI/2+side*0.16; brow.rotation.y=-side*0.22;
+    const fold=part(new THREE.CapsuleGeometry(0.0032,0.026,8,20),skinDark,side*0.036,0.052,0.11,headPivot); fold.rotation.z=side*0.35; fold.rotation.x=-0.15; // носогубные складки
+    const ear=part(new THREE.SphereGeometry(0.03,48,32),skin,side*0.126,0.12,0,headPivot); ear.scale.set(0.45,1.05,0.72);
+    const inner=part(new THREE.SphereGeometry(0.015,32,24),skinDark,side*0.134,0.12,0.006,headPivot); inner.scale.set(0.3,0.75,0.5);
+  }
+  // нос: переносица, кончик, крылья, ноздри
+  const bridge=part(new THREE.CapsuleGeometry(0.0105,0.032,12,32),skin,0,0.118,0.132,headPivot); bridge.rotation.x=0.28;
+  part(new THREE.SphereGeometry(0.0165,48,32),skin,0,0.086,0.137,headPivot);
+  for(const side of [-1,1]){ part(new THREE.SphereGeometry(0.0105,32,24),skin,side*0.017,0.08,0.131,headPivot);
+    part(new THREE.SphereGeometry(0.006,24,18),skinDark,side*0.011,0.07,0.133,headPivot); }
+  // рот: губы и линия рта
+  part(new THREE.SphereGeometry(0.024,48,32),lipM,0,0.034,0.108,headPivot).scale.set(1.2,0.38,0.55);
+  part(new THREE.SphereGeometry(0.02,48,32),lipM,0,0.015,0.104,headPivot).scale.set(1.05,0.42,0.5);
+  part(new THREE.BoxGeometry(0.04,0.0035,0.006),darkM,0,0.026,0.117,headPivot);
+  // волосы — шапка с наклоном: спереди высоко (лицо открыто), сзади низко
+  const hair=part(new THREE.SphereGeometry(0.15,128,96,0,Math.PI*2,0,1.9),hairM,0,0.175,-0.01,headPivot); hair.scale.set(0.95,1.07,1.0); hair.rotation.x=-0.5;
+  if(dress) part(new THREE.SphereGeometry(0.068,64,48),hairM,0,0.27,-0.105,headPivot); // пучок
   if(opts.hat){ const hatM=new THREE.MeshStandardMaterial({color:0x0e0e10,roughness:0.92});
-    part(new THREE.CylinderGeometry(0.215,0.215,0.018,40),hatM,0,0.268,0,headPivot);
-    part(new THREE.CylinderGeometry(0.125,0.14,0.17,40),hatM,0,0.355,0,headPivot);
-    part(new THREE.CylinderGeometry(0.143,0.143,0.035,40),new THREE.MeshStandardMaterial({color:0x2a2026,roughness:0.8}),0,0.285,0,headPivot); }
+    part(new THREE.CylinderGeometry(0.215,0.228,0.016,128),hatM,0,0.272,0,headPivot);
+    part(new THREE.CylinderGeometry(0.124,0.144,0.175,128),hatM,0,0.36,0,headPivot);
+    part(new THREE.SphereGeometry(0.124,96,48,0,Math.PI*2,0,1.2),hatM,0,0.445,0,headPivot).scale.set(1,0.45,1);
+    part(new THREE.CylinderGeometry(0.147,0.147,0.038,128),new THREE.MeshStandardMaterial({color:0x2a2026,roughness:0.8}),0,0.292,0,headPivot); }
   if(opts.scarf){ const scarfM=new THREE.MeshStandardMaterial({map:texFabric,color:0x9a5548,roughness:1});
-    const sc=part(new THREE.SphereGeometry(0.158,48,32,0,Math.PI*2,0,1.85),scarfM,0,0.165,-0.01,headPivot); sc.scale.set(0.96,1.02,0.99);
-    part(new THREE.SphereGeometry(0.045,20,14),scarfM,0.1,0.03,-0.11,headPivot);
-    const flap=part(new THREE.BoxGeometry(0.13,0.2,0.015),scarfM,0,-0.02,-0.145,headPivot); flap.rotation.x=0.15; }
-  // лицо: впалые глаза, нос, рот
-  for(const side of [-1,1]){ const eye=part(new THREE.SphereGeometry(0.02,44,30),new THREE.MeshBasicMaterial({color:0x060606}),side*0.052,0.15,0.125,headPivot); eye.scale.set(1,1.35,0.5); }
-  const nose=part(new THREE.ConeGeometry(0.018,0.05,8),skin,0,0.095,0.135,headPivot); nose.rotation.x=Math.PI/2-0.25;
-  part(new THREE.BoxGeometry(0.05,0.008,0.01),new THREE.MeshStandardMaterial({color:0x4a3428,roughness:0.8}),0,0.045,0.132,headPivot);
-  part(new THREE.CylinderGeometry(0.055,0.065,0.09,12),skin,0,0.0,0,headPivot); // шея
+    const sc=part(new THREE.SphereGeometry(0.156,128,96,0,Math.PI*2,0,2.0),scarfM,0,0.178,-0.012,headPivot); sc.scale.set(0.97,1.04,1.0); sc.rotation.x=-0.45;
+    part(new THREE.SphereGeometry(0.046,48,32),scarfM,0.1,0.028,-0.112,headPivot);
+    const flap=part(new RoundedBoxGeometry(0.13,0.21,0.016,3,0.006),scarfM,0,-0.03,-0.148,headPivot); flap.rotation.x=0.15; }
   g.userData.headPivot=headPivot;
   g.visible=false; scene.add(g); return g; }
 const standing=makeFigure(false,null,{hat:true}); standing.scale.set(1.15,1.18,1.15);
